@@ -1,20 +1,20 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import VideoPlayer from "@/components/VideoPlayer";
 import ChatPanel from "@/components/ChatPanel";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 interface LessonDetailPageProps {
-  params: Promise<{
+  params: {
     courseId: string;
     lessonId: string;
-  }>;
+  };
 }
 
 export default function LessonDetailPage({ params }: LessonDetailPageProps) {
-  const { courseId, lessonId } = use(params);
+  const { courseId, lessonId } = params;
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
 
   return (
