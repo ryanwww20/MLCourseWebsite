@@ -1,0 +1,59 @@
+"use client";
+
+import { useState } from "react";
+import LessonList from "@/components/LessonList";
+import { Lesson } from "@/mock/lessons";
+
+interface CourseDetailTabsProps {
+  courseId: string;
+  lessons: Lesson[];
+}
+
+export default function CourseDetailTabs({ courseId, lessons }: CourseDetailTabsProps) {
+  const [activeTab, setActiveTab] = useState<"lectures" | "homework">("lectures");
+
+  return (
+    <div className="bg-surface rounded-lg border border-border p-6">
+      <div className="border-b border-border mb-6">
+        <nav className="flex gap-8" aria-label="Course sections">
+          <button
+            type="button"
+            onClick={() => setActiveTab("lectures")}
+            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === "lectures"
+                ? "border-foreground text-foreground font-bold"
+                : "border-transparent text-muted hover:text-foreground"
+            }`}
+          >
+            Lectures
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("homework")}
+            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              activeTab === "homework"
+                ? "border-foreground text-foreground font-bold"
+                : "border-transparent text-muted hover:text-foreground"
+            }`}
+          >
+            Homework
+          </button>
+        </nav>
+      </div>
+
+      {activeTab === "lectures" && (
+        <>
+          {lessons.length > 0 ? (
+            <LessonList lessons={lessons} courseId={courseId} />
+          ) : (
+            <p className="text-muted text-center py-8">尚無課程章節</p>
+          )}
+        </>
+      )}
+
+      {activeTab === "homework" && (
+        <p className="text-muted text-center py-8">作業區塊，尚無作業。</p>
+      )}
+    </div>
+  );
+}
