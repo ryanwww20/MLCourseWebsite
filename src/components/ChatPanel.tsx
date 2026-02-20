@@ -13,10 +13,11 @@ interface Message {
 
 interface ChatPanelProps {
   courseId: string;
+  lessonId?: string;
   currentVideoTime: number;
 }
 
-export default function ChatPanel({ courseId, currentVideoTime }: ChatPanelProps) {
+export default function ChatPanel({ courseId, lessonId, currentVideoTime }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -26,6 +27,7 @@ export default function ChatPanel({ courseId, currentVideoTime }: ChatPanelProps
     },
   ]);
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -64,8 +66,8 @@ export default function ChatPanel({ courseId, currentVideoTime }: ChatPanelProps
     return "這是一個很好的問題！根據您提到的內容，我建議您可以參考課程教材中的相關章節，或者查看相關的補充資料。如果還有其他問題，歡迎繼續提問！";
   };
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
 
     const videoTimestamp = input.match(/\[(\d{2}:\d{2})\]/)?.[1];
     const cleanContent = input.replace(/\[\d{2}:\d{2}\]\s*/, "");
@@ -80,9 +82,35 @@ export default function ChatPanel({ courseId, currentVideoTime }: ChatPanelProps
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    setIsLoading(true);
 
-    // Mock response after delay
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseId,
+          lessonId,
+          message: cleanContent,
+          videoTimestamp,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        // 未設定 API key 或服務錯誤時改用 mock 回覆
+        throw new Error(data.error || data.details || "Request failed");
+      }
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: data.content ?? "抱歉，我暫時無法產生回覆。",
+        timestamp: new Date().toLocaleTimeString("zh-TW"),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch {
+      // RAG API 不可用時 fallback 到 mock
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -90,7 +118,9 @@ export default function ChatPanel({ courseId, currentVideoTime }: ChatPanelProps
         timestamp: new Date().toLocaleTimeString("zh-TW"),
       };
       setMessages((prev) => [...prev, assistantMessage]);
-    }, Math.random() * 600 + 600); // 600-1200ms
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -100,6 +130,11 @@ export default function ChatPanel({ courseId, currentVideoTime }: ChatPanelProps
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-4 min-h-0">
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="text-sm text-muted">AI 助教正在思考…</div>
+          </div>
+        )}
         {messages.map((message) => (
           <div
             key={message.id}
@@ -155,11 +190,12 @@ export default function ChatPanel({ courseId, currentVideoTime }: ChatPanelProps
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSend()}
               placeholder="輸入問題..."
-              className="flex-1 px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
+              className="flex-1 px-3 py-2 border border-border rounded-md text-black focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <button
               onClick={handleSend}
-              className="px-4 py-2 bg-accent text-background rounded-2xl transition shadow-sm flex items-center justify-center"
+              disabled={isLoading}
+              className="px-4 py-2 bg-accent text-background rounded-2xl transition shadow-sm flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

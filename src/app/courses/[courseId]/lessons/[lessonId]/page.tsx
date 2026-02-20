@@ -28,7 +28,7 @@ export default function LessonDetailPage({ params }: LessonDetailPageProps) {
             <VideoPlayer onTimeUpdate={setCurrentVideoTime} />
           </div>
           <div className="h-[600px]">
-            <ChatPanel courseId={courseId} currentVideoTime={currentVideoTime} />
+            <ChatPanel courseId={courseId} lessonId={lessonId} currentVideoTime={currentVideoTime} />
           </div>
         </div>
 
@@ -53,7 +53,7 @@ export default function LessonDetailPage({ params }: LessonDetailPageProps) {
             {/* Chat Panel - 30% */}
             <Panel defaultSize={30} minSize={20} className="">
               <div className="h-full">
-                <ChatPanel courseId={courseId} currentVideoTime={currentVideoTime} />
+                <ChatPanel courseId={courseId} lessonId={lessonId} currentVideoTime={currentVideoTime} />
               </div>
             </Panel>
           </PanelGroup>
