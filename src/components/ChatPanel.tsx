@@ -94,9 +94,9 @@ export default function ChatPanel({ courseId, currentVideoTime }: ChatPanelProps
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border border-transparent rounded-lg overflow-hidden">
-      <div className="border-b px-4 py-3 flex-shrink-0">
-        <h3 className="text-lg font-semibold text-gray-900">AI 助教</h3>
+    <div className="flex flex-col h-full bg-surface border border-transparent rounded-lg overflow-hidden">
+      <div className="border-b border-border px-4 py-3 flex-shrink-0">
+        <h3 className="text-lg font-semibold text-foreground">AI 助教</h3>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-4 min-h-0">
@@ -112,18 +112,18 @@ export default function ChatPanel({ courseId, currentVideoTime }: ChatPanelProps
                 </div>
                 {message.videoTimestamp && (
                   <div className="mt-2">
-                    <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                    <span className="text-xs px-1.5 py-0.5 bg-foreground/10 text-muted rounded">
                       {message.videoTimestamp}
                     </span>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="max-w-[80%] rounded-lg p-3 bg-gray-100 text-white">
-                <p className="whitespace-pre-wrap text-gray-600">{message.content}</p>
+              <div className="max-w-[80%] rounded-lg p-3 bg-accent text-background">
+                <p className="whitespace-pre-wrap text-background">{message.content}</p>
                 {message.videoTimestamp && (
                   <div className="mt-2">
-                    <span className="text-xs px-1.5 py-0.5 bg-white/20 rounded">
+                    <span className="text-xs px-1.5 py-0.5 bg-background/20 rounded">
                       {message.videoTimestamp}
                     </span>
                   </div>
@@ -136,15 +136,15 @@ export default function ChatPanel({ courseId, currentVideoTime }: ChatPanelProps
       </div>
 
       <div className="px-4 pb-4 flex-shrink-0">
-        <div className="border border-gray-200 rounded-xl p-3 space-y-2">
+        <div className="border border-border rounded-xl p-3 space-y-2">
           <div className="flex items-center space-x-2">
             <button
               onClick={insertTimestamp}
-              className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              className="px-3 py-1.5 text-sm bg-foreground/10 hover:bg-foreground/20 rounded-md transition-colors text-foreground"
             >
               插入時間戳
             </button>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted">
               目前時間: {formatTime(currentVideoTime)}
             </span>
           </div>
@@ -155,11 +155,11 @@ export default function ChatPanel({ courseId, currentVideoTime }: ChatPanelProps
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSend()}
               placeholder="輸入問題..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <button
               onClick={handleSend}
-              className="px-4 py-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-300 transition-colors flex items-center justify-center"
+              className="px-4 py-2 bg-accent text-background rounded-2xl transition shadow-sm flex items-center justify-center"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

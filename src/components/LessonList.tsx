@@ -15,12 +15,12 @@ export default function LessonList({ lessons, courseId }: LessonListProps) {
           href={`/courses/${courseId}/lessons/${lesson.id}`}
           className="block"
         >
-          <div className="bg-white rounded-lg border border-gray-200 p-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer">
+          <div className="bg-surface rounded-lg border border-border p-4 hover:border-accent hover:shadow-sm transition-all cursor-pointer">
             <div className="flex items-start justify-between mb-2">
-              <h4 className="text-lg font-semibold text-gray-900">{lesson.title}</h4>
-              <span className="text-sm text-gray-500">{lesson.date}</span>
+              <h4 className="text-lg font-semibold text-foreground">{lesson.title}</h4>
+              <span className="text-sm text-muted">{lesson.date}</span>
             </div>
-            <div className="flex items-center space-x-4 text-sm text-gray-600">
+            <div className="flex items-center space-x-4 text-sm text-muted">
               <span className="flex items-center space-x-1">
                 <svg
                   className="w-4 h-4"

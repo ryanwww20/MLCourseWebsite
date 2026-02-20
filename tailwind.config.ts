@@ -10,7 +10,14 @@ const config: Config = {
     extend: {
       colors: {
         background: "var(--background)",
+        surface: "var(--surface)",
         foreground: "var(--foreground)",
+        muted: "var(--muted)",
+        border: "var(--border)",
+        accent: "var(--accent)",
+      },
+      fontFamily: {
+        sans: ['"Inter"', '"Noto Sans TC"', "sans-serif"],
       },
     },
   },
