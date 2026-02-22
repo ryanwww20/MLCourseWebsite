@@ -6,6 +6,12 @@ export interface Lesson {
   date: string;
   videoCount: number;
   materialLinks: string[];
+  /** YouTube 影片連結 */
+  youtubeLink?: string;
+  /** 投影片（PPT）連結 */
+  pptLink?: string;
+  /** PDF 連結 */
+  pdfLink?: string;
 }
 
 export const lessons: Lesson[] = [
@@ -17,6 +23,9 @@ export const lessons: Lesson[] = [
     date: "2026-02-15",
     videoCount: 2,
     materialLinks: ["https://example.com/slides/week1.pdf", "https://example.com/homework/week1.pdf"],
+    youtubeLink: "https://www.youtube.com/watch?v=example1",
+    pptLink: "https://example.com/slides/week1.pptx",
+    pdfLink: "https://example.com/slides/week1.pdf",
   },
   {
     id: "lesson-2",
@@ -26,6 +35,9 @@ export const lessons: Lesson[] = [
     date: "2026-02-22",
     videoCount: 3,
     materialLinks: ["https://example.com/slides/week2.pdf"],
+    youtubeLink: "https://www.youtube.com/watch?v=example2",
+    pptLink: "https://example.com/slides/week2.pptx",
+    pdfLink: "https://example.com/slides/week2.pdf",
   },
   {
     id: "lesson-3",
@@ -35,6 +47,9 @@ export const lessons: Lesson[] = [
     date: "2026-03-01",
     videoCount: 2,
     materialLinks: ["https://example.com/slides/week3.pdf", "https://example.com/code/week3.zip"],
+    youtubeLink: "https://www.youtube.com/watch?v=example3",
+    pptLink: "https://example.com/slides/week3.pptx",
+    pdfLink: "https://example.com/slides/week3.pdf",
   },
   {
     id: "lesson-4",
@@ -44,6 +59,9 @@ export const lessons: Lesson[] = [
     date: "2026-03-08",
     videoCount: 4,
     materialLinks: ["https://example.com/slides/week4.pdf"],
+    youtubeLink: "https://www.youtube.com/watch?v=example4",
+    pptLink: "https://example.com/slides/week4.pptx",
+    pdfLink: "https://example.com/slides/week4.pdf",
   },
   {
     id: "lesson-5",
@@ -53,6 +71,9 @@ export const lessons: Lesson[] = [
     date: "2026-03-15",
     videoCount: 3,
     materialLinks: ["https://example.com/slides/week5.pdf", "https://example.com/notebook/week5.ipynb"],
+    youtubeLink: "https://www.youtube.com/watch?v=example5",
+    pptLink: "https://example.com/slides/week5.pptx",
+    pdfLink: "https://example.com/slides/week5.pdf",
   },
   {
     id: "lesson-1-dl",
@@ -62,6 +83,9 @@ export const lessons: Lesson[] = [
     date: "2026-02-16",
     videoCount: 2,
     materialLinks: ["https://example.com/slides/dl-week1.pdf"],
+    youtubeLink: "https://www.youtube.com/watch?v=example-dl1",
+    pptLink: "https://example.com/slides/dl-week1.pptx",
+    pdfLink: "https://example.com/slides/dl-week1.pdf",
   },
   {
     id: "lesson-2-dl",
@@ -71,6 +95,9 @@ export const lessons: Lesson[] = [
     date: "2026-02-23",
     videoCount: 3,
     materialLinks: ["https://example.com/slides/dl-week2.pdf"],
+    youtubeLink: "https://www.youtube.com/watch?v=example-dl2",
+    pptLink: "https://example.com/slides/dl-week2.pptx",
+    pdfLink: "https://example.com/slides/dl-week2.pdf",
   },
 ];
 
