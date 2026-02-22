@@ -13,7 +13,7 @@ export default function CourseDetailTabs({ courseId, lessons }: CourseDetailTabs
   const [activeTab, setActiveTab] = useState<"lectures" | "homework">("lectures");
 
   return (
-    <div className="bg-surface rounded-lg border border-border p-6">
+    <div className="rounded-2xl shadow-md bg-surface border border-border p-6">
       <div className="border-b border-border mb-6">
         <nav className="flex gap-8" aria-label="Course sections">
           <button

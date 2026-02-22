@@ -26,9 +26,17 @@ function useTheme() {
   return { theme, toggle };
 }
 
-export default function Navbar() {
+interface NavbarProps {
+  variant?: "default" | "onDark";
+}
+
+export default function Navbar({ variant = "default" }: NavbarProps) {
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
+  const onDark = variant === "onDark";
+  const textActive = onDark ? "text-white" : "text-foreground";
+  const textInactive = onDark ? "text-white/70 hover:text-white" : "text-muted hover:text-foreground";
+  const navBg = onDark ? "bg-transparent" : "bg-topBg";
 
   const NavItem = ({ href, label }: { href: string; label: string }) => {
     const isActive = pathname.startsWith(href);
@@ -36,7 +44,7 @@ export default function Navbar() {
       <Link
         href={href}
         className={`flex items-center justify-center gap-2 w-17 font-medium text-sm transition-colors ${
-          isActive ? "text-foreground" : "text-muted hover:text-foreground"
+          isActive ? textActive : textInactive
         }`}
       >
         <span className={`${isActive ? "opacity-100" : "opacity-0"}`}>
@@ -53,14 +61,14 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-background">
+    <nav className={navBg}>
       <div className="sm:px-6 lg:px-8">
         <div className="flex h-16 items-center">
 
           {/* 左側 Logo */}
           <Link href="/home" className="flex items-center gap-3">
-            <div className="h-8 w-8 bg-foreground/10 rounded-md" />
-            <span className="text-lg font-bold text-foreground">
+            <div className={`h-8 w-8 rounded-md ${onDark ? "bg-white/20" : "bg-foreground/10"}`} />
+            <span className={`text-lg font-bold ${textActive}`}>
               LAB LAND
             </span>
           </Link>
@@ -77,7 +85,9 @@ export default function Navbar() {
             <button
               type="button"
               onClick={toggle}
-              className="p-2 rounded-lg text-foreground hover:bg-foreground/15 hover:scale-110 active:scale-95 transition-all duration-200 ease-out"
+              className={`p-2 rounded-lg hover:scale-110 active:scale-95 transition-all duration-200 ease-out ${
+                onDark ? "text-white hover:bg-white/15" : "text-foreground hover:bg-foreground/15"
+              }`}
               aria-label={theme === "dark" ? "切換至淺色模式" : "切換至深色模式"}
             >
               {theme === null ? (
@@ -92,8 +102,8 @@ export default function Navbar() {
                 </svg>
               )}
             </button>
-            <div className="h-8 w-8 rounded-full bg-foreground/10 flex items-center justify-center">
-              <span className="text-sm text-foreground">U</span>
+            <div className={`h-8 w-8 rounded-full flex items-center justify-center ${onDark ? "bg-white/20" : "bg-foreground/10"}`}>
+              <span className={`text-sm ${textActive}`}>U</span>
             </div>
           </div>
         </div>
