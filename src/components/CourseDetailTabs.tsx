@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import LessonList from "@/components/LessonList";
+import HomeworkList from "@/components/HomeworkList";
 import { Lesson } from "@/mock/lessons";
+import { Homework } from "@/mock/homework";
 
 interface CourseDetailTabsProps {
   courseId: string;
   lessons: Lesson[];
+  homework: Homework[];
 }
 
-export default function CourseDetailTabs({ courseId, lessons }: CourseDetailTabsProps) {
+export default function CourseDetailTabs({ courseId, lessons, homework }: CourseDetailTabsProps) {
   const [activeTab, setActiveTab] = useState<"lectures" | "homework">("lectures");
 
   return (
@@ -52,7 +55,13 @@ export default function CourseDetailTabs({ courseId, lessons }: CourseDetailTabs
       )}
 
       {activeTab === "homework" && (
-        <p className="text-muted text-center py-8">作業區塊，尚無作業。</p>
+        <>
+          {homework.length > 0 ? (
+            <HomeworkList homework={homework} />
+          ) : (
+            <p className="text-muted text-center py-8">尚無作業</p>
+          )}
+        </>
       )}
     </div>
   );

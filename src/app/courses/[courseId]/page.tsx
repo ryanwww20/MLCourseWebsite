@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import CourseDetailTabs from "@/components/CourseDetailTabs";
 import { courses } from "@/mock/courses";
+import { homework } from "@/mock/homework";
 import { lessons } from "@/mock/lessons";
 import { notFound } from "next/navigation";
 
@@ -14,6 +15,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
   const { courseId } = await params;
   const course = courses.find((c) => c.id === courseId);
   const courseLessons = lessons.filter((l) => l.courseId === courseId);
+  const courseHomework = homework.filter((h) => h.courseId === courseId);
 
   if (!course) {
     notFound();
@@ -29,9 +31,8 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
       <div className="flex-1 bg-background">
         {/* 主內容區：用 negative margin 往上拉，浮在兩層交界 */}
         <div className="relative -mt-32 mx-auto max-w-6xl px-4 sm:px-6 pb-12">
-          {/* 右側：Lectures / Homework 卡片 */}
           <div className="lg:col-span-2">
-            <CourseDetailTabs courseId={course.id} lessons={courseLessons} />
+            <CourseDetailTabs courseId={course.id} lessons={courseLessons} homework={courseHomework} />
           </div>
         </div>
       </div>
