@@ -8,6 +8,7 @@
 - 📖 **課程總覽**：查看課程詳細資訊與章節列表
 - 🎥 **影片播放**：HTML5 影片播放器
 - 🤖 **AI 助教**：即時聊天功能（目前為 mock 資料）
+- 🔐 **OAuth 登入**：支援 Google、GitHub 登入（NextAuth.js）
 - 🔗 **相關課程**：推薦相關課程
 - 📱 **響應式設計**：支援桌面與行動裝置
 - 🎨 **現代化 UI**：乾淨簡潔的設計風格
@@ -35,6 +36,14 @@ npm run dev
 ```
 
 開啟瀏覽器訪問 [http://localhost:3000](http://localhost:3000)
+
+### OAuth 登入（Google / GitHub）
+
+1. 複製環境變數範例：`cp .env.example .env.local`
+2. 產生 `NEXTAUTH_SECRET`：`openssl rand -base64 32`，填入 `.env.local`
+3. **Google**：到 [Google Cloud Console](https://console.cloud.google.com/apis/credentials) 建立 OAuth 2.0 用戶端 ID，授權重新導向 URI 設為 `http://localhost:3000/api/auth/callback/google`
+4. **GitHub**：到 [GitHub Developer settings](https://github.com/settings/developers) → OAuth Apps 新增應用，Authorization callback URL 設為 `http://localhost:3000/api/auth/callback/github`
+5. 將取得的 Client ID、Client Secret 填入 `.env.local` 對應欄位
 
 ### 建置生產版本
 

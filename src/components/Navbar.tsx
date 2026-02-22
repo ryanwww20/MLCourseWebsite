@@ -1,6 +1,8 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 
 interface NavbarProps {
   variant?: "default" | "onDark";
@@ -8,6 +10,7 @@ interface NavbarProps {
 
 export default function Navbar({ variant = "default" }: NavbarProps) {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
   const onDark = variant === "onDark";
   const textActive = onDark ? "text-white" : "text-foreground";
   const textInactive = onDark ? "text-white/70 hover:text-white" : "text-muted hover:text-foreground";
@@ -55,11 +58,43 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
             <NavItem href="/course_map" label="Course Map" />
           </div>
           
-          {/* 右側：Login */}
+          {/* 右側：登入 / 使用者 */}
           <div className="ml-auto mr-10 flex items-center gap-4">
-            <div className={`h-8 w-8 rounded-full flex items-center justify-center ${onDark ? "bg-white/20" : "bg-foreground/10"}`}>
-              <span className={`text-sm ${textActive}`}>U</span>
-            </div>
+            {status === "loading" ? (
+              <div className={`h-8 w-8 rounded-full ${onDark ? "bg-white/20" : "bg-foreground/10"}`} />
+            ) : session?.user ? (
+              <div className="flex items-center gap-3">
+                {session.user.image ? (
+                  <img
+                    src={session.user.image}
+                    alt=""
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center ${onDark ? "bg-white/20" : "bg-foreground/10"}`}>
+                    <span className={`text-sm ${textActive}`}>
+                      {session.user.name?.[0] ?? session.user.email?.[0] ?? "U"}
+                    </span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => signOut()}
+                  className={`text-sm font-medium ${onDark ? "text-white/80 hover:text-white" : "text-muted hover:text-foreground"}`}
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/api/auth/signin"
+                className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                  onDark ? "text-white bg-white/20 hover:bg-white/30" : "text-foreground bg-foreground/10 hover:bg-foreground/15"
+                }`}
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </div>
