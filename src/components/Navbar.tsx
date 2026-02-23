@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { useEffect, useRef, useState } from "react";
 
 interface NavbarProps {
   variant?: "default" | "onDark";
@@ -11,10 +12,22 @@ interface NavbarProps {
 export default function Navbar({ variant = "default" }: NavbarProps) {
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const onDark = variant === "onDark";
   const textActive = onDark ? "text-white" : "text-foreground";
   const textInactive = onDark ? "text-white/70 hover:text-white" : "text-muted hover:text-foreground";
   const navBg = onDark ? "bg-transparent" : "bg-topBg";
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const NavItem = ({ href, label }: { href: string; label: string }) => {
     const isActive = pathname.startsWith(href);
@@ -61,29 +74,52 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
           {/* 右側：登入 / 使用者 */}
           <div className="ml-auto mr-10 flex items-center gap-4">
             {status === "loading" ? (
-              <div className={`h-8 w-8 rounded-full ${onDark ? "bg-white/20" : "bg-foreground/10"}`} />
+              <div className={`h-8 w-8 rounded-full animate-pulse ${onDark ? "bg-white/20" : "bg-foreground/10"}`} />
             ) : session?.user ? (
-              <div className="flex items-center gap-3">
-                {session.user.image ? (
-                  <img
-                    src={session.user.image}
-                    alt=""
-                    className="h-8 w-8 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center ${onDark ? "bg-white/20" : "bg-foreground/10"}`}>
-                    <span className={`text-sm ${textActive}`}>
-                      {session.user.name?.[0] ?? session.user.email?.[0] ?? "U"}
-                    </span>
-                  </div>
-                )}
+              <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
-                  onClick={() => signOut()}
-                  className={`text-sm font-medium ${onDark ? "text-white/80 hover:text-white" : "text-muted hover:text-foreground"}`}
+                  onClick={() => setDropdownOpen((prev) => !prev)}
+                  className="flex items-center gap-2 rounded-full focus:outline-none"
                 >
-                  Sign Out
+                  {session.user.image ? (
+                    <img
+                      src={session.user.image}
+                      alt=""
+                      className="h-8 w-8 rounded-full object-cover ring-2 ring-transparent hover:ring-foreground/20 transition-all"
+                    />
+                  ) : (
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${onDark ? "bg-white/20" : "bg-foreground/10"}`}>
+                      <span className={`text-sm font-medium ${textActive}`}>
+                        {session.user.name?.[0] ?? session.user.email?.[0] ?? "U"}
+                      </span>
+                    </div>
+                  )}
+                  <span className={`text-sm font-medium ${onDark ? "text-white/90" : "text-foreground"}`}>
+                    {session.user.name ?? session.user.email}
+                  </span>
+                  <svg
+                    className={`w-3.5 h-3.5 transition-transform ${dropdownOpen ? "rotate-180" : ""} ${onDark ? "text-white/70" : "text-muted"}`}
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
+
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-lg border border-border bg-surface shadow-lg py-1 z-50">
+                    <div className="px-4 py-2 border-b border-border">
+                      <p className="text-xs text-muted truncate">{session.user.email}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setDropdownOpen(false); signOut(); }}
+                      className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <Link
