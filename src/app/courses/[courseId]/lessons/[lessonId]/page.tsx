@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import Navbar from "@/components/Navbar";
 import VideoPlayer from "@/components/VideoPlayer";
 import ChatPanel from "@/components/ChatPanel";
@@ -15,7 +16,9 @@ interface LessonDetailPageProps {
 
 export default function LessonDetailPage({ params }: LessonDetailPageProps) {
   const { courseId, lessonId } = params;
+  const { data: session } = useSession();
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
+  const userId = session?.user?.email ?? null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -28,7 +31,7 @@ export default function LessonDetailPage({ params }: LessonDetailPageProps) {
             <VideoPlayer onTimeUpdate={setCurrentVideoTime} />
           </div>
           <div className="h-[600px]">
-            <ChatPanel courseId={courseId} lessonId={lessonId} currentVideoTime={currentVideoTime} />
+            <ChatPanel courseId={courseId} lessonId={lessonId} currentVideoTime={currentVideoTime} userId={userId} />
           </div>
         </div>
 
@@ -53,7 +56,7 @@ export default function LessonDetailPage({ params }: LessonDetailPageProps) {
             {/* Chat Panel - 30% */}
             <Panel defaultSize={30} minSize={20} className="">
               <div className="h-full">
-                <ChatPanel courseId={courseId} lessonId={lessonId} currentVideoTime={currentVideoTime} />
+                <ChatPanel courseId={courseId} lessonId={lessonId} currentVideoTime={currentVideoTime} userId={userId} />
               </div>
             </Panel>
           </PanelGroup>

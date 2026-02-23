@@ -10,6 +10,7 @@ const config: Config = {
     extend: {
       colors: {
         background: "var(--background)",
+        topBg: "var(--top-bg)",
         surface: "var(--surface)",
         foreground: "var(--foreground)",
         muted: "var(--muted)",
