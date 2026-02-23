@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 
-interface Message {
+export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
@@ -11,22 +11,67 @@ interface Message {
   videoTimestamp?: string;
 }
 
-interface ChatPanelProps {
-  courseId: string;
-  currentVideoTime: number;
+const CHAT_STORAGE_PREFIX = "chat:";
+const DEFAULT_WELCOME: Message = {
+  id: "welcome",
+  role: "assistant",
+  content: "您好！我是 AI 助教，有什麼問題都可以問我。",
+  timestamp: "",
+};
+
+function getStorageKey(userId: string | null, courseId: string, lessonId: string): string | null {
+  if (!userId) return null;
+  return `${CHAT_STORAGE_PREFIX}${userId}:${courseId}:${lessonId}`;
 }
 
-export default function ChatPanel({ courseId, currentVideoTime }: ChatPanelProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content: "您好！我是 AI 助教，有什麼問題都可以問我。",
-      timestamp: new Date().toLocaleTimeString("zh-TW"),
-    },
-  ]);
+function loadChatFromStorage(key: string | null): Message[] | null {
+  if (!key || typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Message[];
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveChatToStorage(key: string | null, messages: Message[]) {
+  if (!key || typeof window === "undefined") return;
+  try {
+    localStorage.setItem(key, JSON.stringify(messages));
+  } catch {
+    // ignore quota or parse errors
+  }
+}
+
+interface ChatPanelProps {
+  courseId: string;
+  lessonId: string;
+  currentVideoTime: number;
+  /** 登入使用者的 id，有值時會依使用者＋課程＋章節儲存聊天記錄 */
+  userId?: string | null;
+}
+
+export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId = null }: ChatPanelProps) {
+  const storageKey = getStorageKey(userId ?? null, courseId, lessonId);
+  const [messages, setMessages] = useState<Message[]>([DEFAULT_WELCOME]);
   const [input, setInput] = useState("");
+  const [hasLoaded, setHasLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 載入該使用者在此課程／章節的歷史記錄
+  useEffect(() => {
+    const stored = loadChatFromStorage(storageKey ?? null);
+    if (stored) setMessages(stored);
+    setHasLoaded(true);
+  }, [storageKey]);
+
+  // 有登入且已載入後，每次 messages 變更就寫入 localStorage
+  useEffect(() => {
+    if (!hasLoaded || !storageKey) return;
+    saveChatToStorage(storageKey, messages);
+  }, [messages, hasLoaded, storageKey]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
