@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import ReactMarkdown from "react-markdown";
 
 export interface Message {
@@ -12,6 +13,15 @@ export interface Message {
 }
 
 const CHAT_STORAGE_PREFIX = "chat:";
+const COMMENT_STORAGE_PREFIX = "comments:";
+
+export interface Comment {
+  id: string;
+  content: string;
+  author: string;
+  createdAt: string;
+}
+
 const DEFAULT_WELCOME: Message = {
   id: "welcome",
   role: "assistant",
@@ -45,6 +55,31 @@ function saveChatToStorage(key: string | null, messages: Message[]) {
   }
 }
 
+function getCommentStorageKey(courseId: string, lessonId: string): string {
+  return `${COMMENT_STORAGE_PREFIX}${courseId}:${lessonId}`;
+}
+
+function loadCommentsFromStorage(courseId: string, lessonId: string): Comment[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(getCommentStorageKey(courseId, lessonId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Comment[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCommentsToStorage(courseId: string, lessonId: string, comments: Comment[]) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(getCommentStorageKey(courseId, lessonId), JSON.stringify(comments));
+  } catch {
+    // ignore
+  }
+}
+
 interface ChatPanelProps {
   courseId: string;
   lessonId: string;
@@ -59,7 +94,11 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [activeTab, setActiveTab] = useState<"chat" | "comments">("chat");
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentInput, setCommentInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const commentsEndRef = useRef<HTMLDivElement>(null);
 
   // 載入該使用者在此課程／章節的歷史記錄
   useEffect(() => {
@@ -74,6 +113,16 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
     saveChatToStorage(storageKey, messages);
   }, [messages, hasLoaded, storageKey]);
 
+  // 載入此課程／章節的留言
+  useEffect(() => {
+    setComments(loadCommentsFromStorage(courseId, lessonId));
+  }, [courseId, lessonId]);
+
+  // 留言變更時寫入 localStorage
+  useEffect(() => {
+    saveCommentsToStorage(courseId, lessonId, comments);
+  }, [courseId, lessonId, comments]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -81,6 +130,28 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const scrollCommentsToBottom = () => {
+    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    if (activeTab === "comments") scrollCommentsToBottom();
+  }, [activeTab, comments]);
+
+  const handleSubmitComment = () => {
+    const content = commentInput.trim();
+    if (!content) return;
+    const author = session?.user?.name ?? session?.user?.email ?? "訪客";
+    const newComment: Comment = {
+      id: Date.now().toString(),
+      content,
+      author,
+      createdAt: new Date().toLocaleString("zh-TW"),
+    };
+    setComments((prev) => [...prev, newComment]);
+    setCommentInput("");
+  };
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -91,6 +162,11 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
   const insertTimestamp = () => {
     const timestamp = `[${formatTime(currentVideoTime)}] `;
     setInput((prev) => timestamp + prev);
+  };
+
+  const insertCommentTimestamp = () => {
+    const timestamp = `[${formatTime(currentVideoTime)}] `;
+    setCommentInput((prev) => timestamp + prev);
   };
 
   const generateMockResponse = (userMessage: string): string => {
@@ -167,18 +243,32 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
     }
   };
 
+  const { data: session } = useSession();
+
   return (
     <div className="flex flex-col h-full bg-surface border border-transparent rounded-lg overflow-hidden">
-      <div className="border-b border-border px-4 py-3 flex-shrink-0">
-        <h3 className="text-lg font-semibold text-foreground">AI 助教</h3>
+      <div className="border-b border-border flex-shrink-0">
+        <div className="flex">
+          <button
+            type="button"
+            onClick={() => setActiveTab("chat")}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === "chat" ? "text-foreground border-b-2 border-accent bg-transparent" : "text-muted hover:text-foreground"}`}
+          >
+            AI 助教
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("comments")}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === "comments" ? "text-foreground border-b-2 border-accent bg-transparent" : "text-muted hover:text-foreground"}`}
+          >
+            留言區
+          </button>
+        </div>
       </div>
 
+      {activeTab === "chat" && (
+        <>
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-4 min-h-0">
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="text-sm text-muted">AI 助教正在思考…</div>
-          </div>
-        )}
         {messages.map((message) => (
           <div
             key={message.id}
@@ -198,8 +288,8 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
                 )}
               </div>
             ) : (
-              <div className="max-w-[80%] rounded-lg p-3 bg-accent text-background">
-                <p className="whitespace-pre-wrap text-background">{message.content}</p>
+              <div className="max-w-[80%] rounded-lg p-3 bg-accent">
+                <p className="whitespace-pre-wrap text-black">{message.content}</p>
                 {message.videoTimestamp && (
                   <div className="mt-2">
                     <span className="text-xs px-1.5 py-0.5 bg-background/20 rounded">
@@ -211,6 +301,17 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
             )}
           </div>
         ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="max-w-[80%] rounded-2xl rounded-tl-sm px-4 py-3 bg-foreground/10">
+              <div className="flex items-center gap-1.5">
+                <span className="typing-dot w-2 h-2 rounded-full bg-muted shrink-0" />
+                <span className="typing-dot w-2 h-2 rounded-full bg-muted shrink-0" />
+                <span className="typing-dot w-2 h-2 rounded-full bg-muted shrink-0" />
+              </div>
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -234,12 +335,12 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSend()}
               placeholder="輸入問題..."
-              className="flex-1 px-3 py-2 border border-border rounded-md text-black focus:outline-none focus:ring-2 focus:ring-accent"
+              className="flex-1 min-h-10 px-3 py-2 border border-border rounded-md text-black focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <button
               onClick={handleSend}
               disabled={isLoading}
-              className="px-4 py-2 bg-accent text-background rounded-2xl transition shadow-sm flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+              className={`relative px-4 py-2 bg-accent text-white rounded-2xl transition flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden ${!isLoading && input.trim() ? "shadow-md before:content-[''] before:absolute before:inset-0 before:bg-black/25 before:rounded-2xl" : "shadow-sm"}`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -247,7 +348,7 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
                 viewBox="0 0 24 24"
                 strokeWidth={2}
                 stroke="currentColor"
-                className="w-5 h-5"
+                className="relative w-5 h-5"
               >
                 <path
                   strokeLinecap="round"
@@ -259,6 +360,72 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
           </div>
         </div>
       </div>
+        </>
+      )}
+
+      {activeTab === "comments" && (
+        <>
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-3 min-h-0">
+        {comments.length === 0 ? (
+          <p className="text-sm text-muted">尚無留言，來留一句吧～</p>
+        ) : (
+          comments.map((c) => (
+            <div key={c.id} className="rounded-lg p-3 bg-foreground/5 border border-border">
+              <p className="text-sm text-foreground whitespace-pre-wrap">{c.content}</p>
+              <p className="text-xs text-muted mt-1">{c.author} · {c.createdAt}</p>
+            </div>
+          ))
+        )}
+        <div ref={commentsEndRef} />
+      </div>
+      <div className="px-4 pb-4 flex-shrink-0">
+        <div className="border border-border rounded-xl p-3 space-y-2">
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={insertCommentTimestamp}
+              className="px-3 py-1.5 text-sm bg-foreground/10 hover:bg-foreground/20 rounded-md transition-colors text-foreground"
+            >
+              插入時間戳
+            </button>
+            <span className="text-xs text-muted">
+              目前時間: {formatTime(currentVideoTime)}
+            </span>
+          </div>
+          <div className="flex space-x-2">
+            <textarea
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+              placeholder="輸入留言..."
+              rows={1}
+              className="flex-1 min-h-10 px-3 py-2 border border-border rounded-md text-black resize-none focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+            <button
+              type="button"
+              onClick={handleSubmitComment}
+              disabled={!commentInput.trim()}
+              className={`relative px-4 py-2 bg-accent text-white rounded-2xl transition flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden ${commentInput.trim() ? "shadow-md before:content-[''] before:absolute before:inset-0 before:bg-black/25 before:rounded-2xl" : "shadow-sm"}`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="relative w-5 h-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+        </>
+      )}
     </div>
   );
 }
