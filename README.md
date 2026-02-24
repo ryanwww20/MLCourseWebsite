@@ -7,8 +7,8 @@
 - 📚 **課程列表**：瀏覽所有可用課程
 - 📖 **課程總覽**：查看課程詳細資訊與章節列表
 - 🎥 **影片播放**：HTML5 影片播放器
-- 🤖 **AI 助教**：即時聊天功能（目前為 mock 資料）
 - 🔐 **OAuth 登入**：支援 Google、GitHub 登入（NextAuth.js）
+- 🤖 **AI 助教（RAG）**：即時聊天，可依課程／章節檢索知識庫並由 LLM 回答；未設定 API key 時自動 fallback 至 mock
 - 🔗 **相關課程**：推薦相關課程
 - 📱 **響應式設計**：支援桌面與行動裝置
 - 🎨 **現代化 UI**：乾淨簡潔的設計風格
@@ -67,6 +67,8 @@ src/
 │   │               └── page.tsx  # 影片播放頁
 │   ├── layout.tsx         # Root layout
 │   └── globals.css        # 全域樣式
+├── data/                   # RAG 知識庫
+│   └── ragContent.ts      # 課程／章節內容片段與檢索
 ├── components/             # 可重用元件
 │   ├── Navbar.tsx         # 導航列
 │   ├── CourseCard.tsx     # 課程卡片
@@ -103,11 +105,11 @@ src/
   - 上方：影片播放器
   - 下方：AI 助教聊天面板
 
-#### AI 助教功能
+#### AI 助教功能（RAG）
 - 聊天訊息列表（支援 Markdown）
 - 輸入框與送出按鈕
 - 「插入時間戳」按鈕：將當前影片時間插入輸入框
-- Mock 回覆（600-1200ms 延遲）
+- **RAG 串接**：依目前課程／章節從知識庫檢索相關內容，再交由 OpenAI 產生回覆；若未設定 `OPENAI_API_KEY` 或 API 失敗則使用 mock 回覆
 - 訊息自動滾動到底部
 
 #### 相關課程標籤
@@ -122,6 +124,40 @@ src/
 - `relatedCourses.ts`：相關課程對應關係
 
 未來接 API 時，只需將這些 mock 資料的讀取改為 API 呼叫即可。
+
+## AI 助教 RAG 設定
+
+AI 助教使用 **RAG（Retrieval-Augmented Generation）**：先從課程知識庫檢索與問題相關的片段，再將這些內容與使用者問題一併送給 LLM 產生回答。
+
+### 方式一：Hugging Face（推薦，使用現成模型如 Llama 3.2）
+
+1. 在 [Hugging Face](https://huggingface.co/settings/tokens) 建立 Access Token，並開啟 **Inference** 權限。
+2. 在專案根目錄建立 `.env.local`：
+   ```env
+   HUGGINGFACE_API_KEY=hf_xxxx
+   # 可選，預設為 meta-llama/Llama-3.2-3B-Instruct
+   HF_MODEL=meta-llama/Llama-3.2-3B-Instruct
+   ```
+3. 重新啟動 `npm run dev`。若同時設定了 `HUGGINGFACE_API_KEY` 與 `OPENAI_API_KEY`，會優先使用 Hugging Face。  
+   **注意**：部分模型（如 `meta-llama/Llama-3.2-3B-Instruct`）需在 Hugging Face 上同意授權並取得存取權限後才能透過 Inference API 使用。
+
+### 方式二：OpenAI
+
+1. 在專案根目錄建立 `.env.local`，加入：
+   ```env
+   OPENAI_API_KEY=sk-your-openai-api-key
+   ```
+2. 重新啟動 `npm run dev`。
+
+### 知識庫與檢索
+
+- 知識庫來源：`src/data/ragContent.ts`，內含課程／章節對應的內容片段（title、content、keywords）。
+- 檢索方式：依 `courseId`、`lessonId` 篩選後，以關鍵字重疊做簡單檢索，取前 5 個片段作為 LLM 的 context。
+- 擴充方式：在 `ragChunks` 中新增片段，或改寫 `retrieveChunks` 改接向量資料庫（如 Pinecone、Supabase pgvector）。
+
+### 未設定 API key 時
+
+若未設定 `HUGGINGFACE_API_KEY` 與 `OPENAI_API_KEY`，`/api/chat` 會回傳 503，前端會自動改為使用內建 mock 回覆，不影響一般操作。
 
 ## 後續整合 API
 
