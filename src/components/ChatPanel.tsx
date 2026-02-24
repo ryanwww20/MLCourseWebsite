@@ -86,19 +86,24 @@ interface ChatPanelProps {
   currentVideoTime: number;
   /** 登入使用者的 id，有值時會依使用者＋課程＋章節儲存聊天記錄 */
   userId?: string | null;
+  /** 僅顯示單一區塊時使用；未傳則顯示分頁（AI 助教 / 留言區） */
+  mode?: "chat" | "comments";
 }
 
-export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId = null }: ChatPanelProps) {
+export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId = null, mode }: ChatPanelProps) {
   const storageKey = getStorageKey(userId ?? null, courseId, lessonId);
   const [messages, setMessages] = useState<Message[]>([DEFAULT_WELCOME]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chat" | "comments">("chat");
+  const [activeTab, setActiveTab] = useState<"chat" | "comments">(mode ?? "chat");
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
+
+  const showChat = mode ? mode === "chat" : activeTab === "chat";
+  const showComments = mode ? mode === "comments" : activeTab === "comments";
 
   // 載入該使用者在此課程／章節的歷史記錄
   useEffect(() => {
@@ -136,8 +141,8 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
   };
 
   useEffect(() => {
-    if (activeTab === "comments") scrollCommentsToBottom();
-  }, [activeTab, comments]);
+    if (showComments) scrollCommentsToBottom();
+  }, [showComments, comments]);
 
   const handleSubmitComment = () => {
     const content = commentInput.trim();
@@ -247,26 +252,28 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
 
   return (
     <div className="flex flex-col h-full bg-surface border border-transparent rounded-lg overflow-hidden">
-      <div className="border-b border-border flex-shrink-0">
-        <div className="flex">
-          <button
-            type="button"
-            onClick={() => setActiveTab("chat")}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === "chat" ? "text-foreground border-b-2 border-accent bg-transparent" : "text-muted hover:text-foreground"}`}
-          >
-            AI 助教
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("comments")}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === "comments" ? "text-foreground border-b-2 border-accent bg-transparent" : "text-muted hover:text-foreground"}`}
-          >
-            留言區
-          </button>
+      {!mode && (
+        <div className="border-b border-border flex-shrink-0">
+          <div className="flex">
+            <button
+              type="button"
+              onClick={() => setActiveTab("chat")}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === "chat" ? "text-foreground border-b-2 border-accent bg-transparent" : "text-muted hover:text-foreground"}`}
+            >
+              AI 助教
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("comments")}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === "comments" ? "text-foreground border-b-2 border-accent bg-transparent" : "text-muted hover:text-foreground"}`}
+            >
+              留言區
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {activeTab === "chat" && (
+      {showChat && (
         <>
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-4 min-h-0">
         {messages.map((message) => (
@@ -363,7 +370,7 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
         </>
       )}
 
-      {activeTab === "comments" && (
+      {showComments && (
         <>
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-3 min-h-0">
         {comments.length === 0 ? (
