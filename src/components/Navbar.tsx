@@ -52,7 +52,7 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
   };
 
   return (
-    <nav className={navBg}>
+    <nav className={`sticky top-0 z-50 ${navBg}`}>
       <div className="sm:px-6 lg:px-8">
         <div className="flex h-16 items-center">
 
