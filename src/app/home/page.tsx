@@ -13,16 +13,13 @@ const features = [
       </svg>
     ),
   },
-  {
-    href: "/course_map",
-    label: "Course Map",
-    description: "課程地圖",
-    icon: (
-      <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-      </svg>
-    ),
-  },
+  // Course Map 尚未上線，先隱藏
+  // {
+  //   href: "/course_map",
+  //   label: "Course Map",
+  //   description: "課程地圖",
+  //   icon: (...),
+  // },
   {
     href: "#",
     label: "AI Assistant",
@@ -66,13 +63,13 @@ export default function HomePage() {
 
       <News />
 
-      {/* 3. Features — 四個 icon 區塊，佔滿橫幅 */}
+      {/* 3. Features — icon 區塊，佔滿橫幅 */}
       <section className="w-full border-b border-border bg-background">
         <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold text-foreground text-center mb-12">
             Features
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((item) => {
               const content = (
                 <>

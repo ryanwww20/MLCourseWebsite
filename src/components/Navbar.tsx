@@ -60,7 +60,7 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
           <Link href="/home" className="flex items-center gap-3">
             <div className={`h-8 w-8 rounded-md ${onDark ? "bg-white/20" : "bg-foreground/10"}`} />
             <span className={`text-lg font-bold ${textActive}`}>
-              LAB LAND
+              ML Website
             </span>
           </Link>
 
@@ -68,7 +68,9 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
           <div className="ml-10 flex items-center gap-8">
             <NavItem href="/home" label="Home" />
             <NavItem href="/courses" label="Courses" />
+            {/* Course Map 尚未上線，先隱藏
             <NavItem href="/course_map" label="Course Map" />
+            */}
           </div>
           
           {/* 右側：登入 / 使用者 */}
