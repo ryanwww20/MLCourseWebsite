@@ -29,13 +29,13 @@ const DEFAULT_WELCOME: Message = {
   timestamp: "",
 };
 
-function getStorageKey(userId: string | null, courseId: string, lessonId: string): string | null {
-  if (!userId) return null;
-  return `${CHAT_STORAGE_PREFIX}${userId}:${courseId}:${lessonId}`;
+/** 僅用課程+章節當 key，避免刷新時 useSession 尚未回傳導致 key 不一致、讀不到已存的對話 */
+function getChatStorageKey(courseId: string, lessonId: string): string {
+  return `${CHAT_STORAGE_PREFIX}${courseId}:${lessonId}`;
 }
 
-function loadChatFromStorage(key: string | null): Message[] | null {
-  if (!key || typeof window === "undefined") return null;
+function loadChatFromStorage(key: string): Message[] | null {
+  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
@@ -46,8 +46,8 @@ function loadChatFromStorage(key: string | null): Message[] | null {
   }
 }
 
-function saveChatToStorage(key: string | null, messages: Message[]) {
-  if (!key || typeof window === "undefined") return;
+function saveChatToStorage(key: string, messages: Message[]) {
+  if (typeof window === "undefined") return;
   try {
     localStorage.setItem(key, JSON.stringify(messages));
   } catch {
@@ -91,7 +91,7 @@ interface ChatPanelProps {
 }
 
 export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId = null, mode }: ChatPanelProps) {
-  const storageKey = getStorageKey(userId ?? null, courseId, lessonId);
+  const storageKey = getChatStorageKey(courseId, lessonId);
   const [messages, setMessages] = useState<Message[]>([DEFAULT_WELCOME]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -105,16 +105,16 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
   const showChat = mode ? mode === "chat" : activeTab === "chat";
   const showComments = mode ? mode === "comments" : activeTab === "comments";
 
-  // 載入該使用者在此課程／章節的歷史記錄
+  // 載入此課程／章節的 AI 助教對話（key 固定為課程+章節，刷新或回訪都會還原）
   useEffect(() => {
-    const stored = loadChatFromStorage(storageKey ?? null);
-    if (stored) setMessages(stored);
+    const stored = loadChatFromStorage(storageKey);
+    if (stored && stored.length > 0) setMessages(stored);
     setHasLoaded(true);
   }, [storageKey]);
 
-  // 有登入且已載入後，每次 messages 變更就寫入 localStorage
+  // 已載入後，每次 messages 變更就寫入 localStorage，離開或刷新都不會消失
   useEffect(() => {
-    if (!hasLoaded || !storageKey) return;
+    if (!hasLoaded) return;
     saveChatToStorage(storageKey, messages);
   }, [messages, hasLoaded, storageKey]);
 
