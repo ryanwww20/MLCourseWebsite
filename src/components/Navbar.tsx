@@ -113,6 +113,13 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
                     <div className="px-4 py-2 border-b border-border">
                       <p className="text-xs text-muted truncate">{session.user.email}</p>
                     </div>
+                    <Link
+                      href="/settings"
+                      onClick={() => setDropdownOpen(false)}
+                      className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                    >
+                      設定
+                    </Link>
                     <button
                       type="button"
                       onClick={() => { setDropdownOpen(false); signOut(); }}
