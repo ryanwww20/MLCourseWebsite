@@ -10,9 +10,11 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 interface LessonDetailClientProps {
   courseId: string;
   lessonId: string;
+  /** 目前課程／影片標題，供 AI 助教 RAG 使用 */
+  lessonTitle?: string;
 }
 
-export default function LessonDetailClient({ courseId, lessonId }: LessonDetailClientProps) {
+export default function LessonDetailClient({ courseId, lessonId, lessonTitle }: LessonDetailClientProps) {
   const { data: session } = useSession();
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
   const userId = session?.user?.email ?? null;
@@ -28,7 +30,7 @@ export default function LessonDetailClient({ courseId, lessonId }: LessonDetailC
             <VideoPlayer onTimeUpdate={setCurrentVideoTime} />
           </div>
           <div className="h-[600px]">
-            <ChatPanel courseId={courseId} lessonId={lessonId} currentVideoTime={currentVideoTime} userId={userId} />
+            <ChatPanel courseId={courseId} lessonId={lessonId} lessonTitle={lessonTitle} currentVideoTime={currentVideoTime} userId={userId} />
           </div>
         </div>
 
@@ -53,7 +55,7 @@ export default function LessonDetailClient({ courseId, lessonId }: LessonDetailC
             {/* Chat Panel - 30% */}
             <Panel defaultSize={30} minSize={20} className="">
               <div className="h-full">
-                <ChatPanel courseId={courseId} lessonId={lessonId} currentVideoTime={currentVideoTime} userId={userId} />
+                <ChatPanel courseId={courseId} lessonId={lessonId} lessonTitle={lessonTitle} currentVideoTime={currentVideoTime} userId={userId} />
               </div>
             </Panel>
           </PanelGroup>

@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 
 export interface Message {
   id: string;
@@ -83,14 +86,28 @@ function saveCommentsToStorage(courseId: string, lessonId: string, comments: Com
 interface ChatPanelProps {
   courseId: string;
   lessonId: string;
+  /** 目前課程／影片標題，傳給 RAG 後端做 video_context */
+  lessonTitle?: string | null;
   currentVideoTime: number;
   /** 登入使用者的 id，有值時會依使用者＋課程＋章節儲存聊天記錄 */
   userId?: string | null;
 }
 
-export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId = null }: ChatPanelProps) {
+/** 將秒數轉成 RAG 接受的時間格式：MM:SS 或 H:MM:SS */
+function formatVideoTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+export default function ChatPanel({ courseId, lessonId, lessonTitle = null, currentVideoTime, userId = null }: ChatPanelProps) {
   const storageKey = getStorageKey(userId ?? null, courseId, lessonId);
   const [messages, setMessages] = useState<Message[]>([DEFAULT_WELCOME]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -112,6 +129,11 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
     if (!hasLoaded || !storageKey) return;
     saveChatToStorage(storageKey, messages);
   }, [messages, hasLoaded, storageKey]);
+
+  // 切換課程／章節時清掉 RAG 對話 id，視為新對話
+  useEffect(() => {
+    setConversationId(null);
+  }, [courseId, lessonId]);
 
   // 載入此課程／章節的留言
   useEffect(() => {
@@ -157,6 +179,22 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const startNewChat = async () => {
+    if (conversationId) {
+      try {
+        await fetch("/api/conversation/new", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversation_id: conversationId }),
+        });
+      } catch {
+        // ignore
+      }
+      setConversationId(null);
+    }
+    setMessages([DEFAULT_WELCOME]);
   };
 
   const insertTimestamp = () => {
@@ -205,22 +243,27 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
     setIsLoading(true);
 
     try {
+      const payload: Record<string, unknown> = {
+        courseId,
+        lessonId,
+        message: cleanContent,
+        videoTimestamp: videoTimestamp ?? formatVideoTimestamp(currentVideoTime),
+        conversation_id: conversationId ?? undefined,
+      };
+      if (lessonTitle) payload.video_name = lessonTitle;
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          courseId,
-          lessonId,
-          message: cleanContent,
-          videoTimestamp,
-        }),
+        body: JSON.stringify(payload),
       });
-      const data = await res.json();
+      const data = await res.json() as { content?: string; conversation_id?: string; error?: string; details?: string };
 
       if (!res.ok) {
-        // 未設定 API key 或服務錯誤時改用 mock 回覆
         throw new Error(data.error || data.details || "Request failed");
       }
+
+      if (data.conversation_id) setConversationId(data.conversation_id);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -248,7 +291,7 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
   return (
     <div className="flex flex-col h-full bg-surface border border-transparent rounded-lg overflow-hidden">
       <div className="border-b border-border flex-shrink-0">
-        <div className="flex">
+        <div className="flex items-center">
           <button
             type="button"
             onClick={() => setActiveTab("chat")}
@@ -256,6 +299,15 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
           >
             AI 助教
           </button>
+          {activeTab === "chat" && (
+            <button
+              type="button"
+              onClick={startNewChat}
+              className="px-3 py-1.5 text-xs text-muted hover:text-foreground hover:bg-foreground/10 rounded transition-colors"
+            >
+              新對話
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setActiveTab("comments")}
@@ -277,7 +329,12 @@ export default function ChatPanel({ courseId, lessonId, currentVideoTime, userId
             {message.role === "assistant" ? (
               <div className="max-w-[80%]">
                 <div className="prose prose-sm max-w-none">
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkMath]}
+                    rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
                 </div>
                 {message.videoTimestamp && (
                   <div className="mt-2">

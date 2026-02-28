@@ -159,6 +159,26 @@ AI 助教使用 **RAG（Retrieval-Augmented Generation）**：先從課程知識
 
 若未設定 `HUGGINGFACE_API_KEY` 與 `OPENAI_API_KEY`，`/api/chat` 會回傳 503，前端會自動改為使用內建 mock 回覆，不影響一般操作。
 
+### 方式三：ML2026 RAG 後端整合（Vertex AI + RAG）
+
+若你已架設 [ML2026-RAG](https://github.com/your-org/ML2026-RAG) 的 Flask 後端，可讓 AI 助教改為使用該後端的 RAG + Gemini 引擎（多輪對話、影片情境、課程知識庫檢索）。
+
+1. 啟動 ML2026-RAG 後端（例如在 `ML2026-RAG/ML2026-RAG-frontend/backend` 執行 `python app.py`，預設 `http://localhost:5010`）。
+2. 在課程網站專案根目錄的 `.env.local` 加入：
+   ```env
+   RAG_BACKEND_URL=http://localhost:5010
+   ```
+3. 重新啟動 `npm run dev`。
+
+**行為說明：**
+
+- 當 `RAG_BACKEND_URL` 有設定時，`/api/chat` 會將請求轉發到 RAG 後端的 `POST /api/query`，不再使用 Hugging Face / OpenAI 與本地 `ragContent`。
+- 前端會自動帶上：目前課程／章節的**影片標題**（`lessonTitle`）與**播放時間戳**，作為 `video_context`，讓回答更貼近當下影片內容。
+- 支援**多輪對話**：後端回傳的 `conversation_id` 會保留並在後續訊息中帶上；點擊「新對話」會呼叫 RAG 後端的 `POST /api/conversation/new` 並清空對話。
+- 助教回覆若含 LaTeX 數學（`$...$`、`$$...$$`），會以 KaTeX 正確顯示。
+
+未設定 `RAG_BACKEND_URL` 時，行為與原先相同（Hugging Face / OpenAI + 本地知識庫，或 mock）。
+
 ## 後續整合 API
 
 當需要接後端 API 時，建議：

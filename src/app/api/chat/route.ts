@@ -4,11 +4,20 @@ import { retrieveChunks } from "@/data/ragContent";
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 const HF_MODEL_DEFAULT = "meta-llama/Llama-3.2-3B-Instruct";
 
+const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL?.replace(/\/$/, ""); // e.g. http://localhost:5010
+
 export interface ChatRequestBody {
   courseId: string;
   lessonId?: string;
   message: string;
   videoTimestamp?: string;
+  /** 多輪對話：第一次不傳，之後帶上後端回傳的 conversation_id */
+  conversation_id?: string | null;
+  /** 目前觀看的課程／影片名稱，供 ML2026 RAG 後端做 video_context */
+  video_name?: string | null;
+  /** base64 圖片（不含 data URI 前綴），選填 */
+  image?: string | null;
+  image_mime_type?: string | null;
 }
 
 function buildRAGContext(chunks: { title: string; content: string }[]): string {
@@ -21,13 +30,67 @@ function buildRAGContext(chunks: { title: string; content: string }[]): string {
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as ChatRequestBody;
-    const { courseId, lessonId, message, videoTimestamp } = body;
+    const {
+      courseId,
+      lessonId,
+      message,
+      videoTimestamp,
+      conversation_id,
+      video_name,
+      image,
+      image_mime_type,
+    } = body;
 
     if (!courseId || !message?.trim()) {
       return NextResponse.json(
         { error: "缺少 courseId 或 message" },
         { status: 400 }
       );
+    }
+
+    // 若已設定 ML2026 RAG 後端，直接轉發到該 API
+    if (RAG_BACKEND_URL) {
+      const ragPayload: Record<string, unknown> = {
+        query: message.trim(),
+        conversation_id: conversation_id || null,
+      };
+      if (video_name) {
+        ragPayload.video_context = {
+          video_name,
+          timestamp: videoTimestamp || null,
+        };
+      }
+      if (image && image_mime_type) {
+        ragPayload.image = image;
+        ragPayload.image_mime_type = image_mime_type;
+      }
+
+      const ragRes = await fetch(`${RAG_BACKEND_URL}/api/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ragPayload),
+        signal: AbortSignal.timeout(5 * 60 * 1000), // 5 min
+      });
+
+      const ragData = (await ragRes.json()) as {
+        response?: string | null;
+        conversation_id?: string;
+        steps?: unknown[];
+        error?: string;
+      };
+
+      if (!ragRes.ok) {
+        return NextResponse.json(
+          { error: ragData.error ?? "RAG 後端錯誤", details: String(ragRes.status) },
+          { status: ragRes.status >= 500 ? 502 : ragRes.status }
+        );
+      }
+
+      return NextResponse.json({
+        content: ragData.response ?? "(No response)",
+        conversation_id: ragData.conversation_id ?? undefined,
+        steps: ragData.steps,
+      });
     }
 
     const hfKey = process.env.HUGGINGFACE_API_KEY;
@@ -37,7 +100,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "未設定 LLM API Key",
-          hint: "請在 .env.local 設定 HUGGINGFACE_API_KEY（推薦）或 OPENAI_API_KEY 以啟用 RAG 助教",
+          hint: "請在 .env.local 設定 HUGGINGFACE_API_KEY（推薦）或 OPENAI_API_KEY 以啟用 RAG 助教；或設定 RAG_BACKEND_URL 使用 ML2026 RAG 後端",
         },
         { status: 503 }
       );
