@@ -46,7 +46,6 @@ export default function LessonDetailClient({ courseId, lessonId }: LessonDetailC
 
           {/* AI 助教（右側，桌面時跨兩行與影片+留言區同高） */}
           <div className="flex flex-col min-h-[400px] lg:min-h-0 lg:col-start-2 lg:row-start-1 lg:row-span-2">
-            <h2 className="text-lg font-semibold text-foreground mb-3">AI 助教</h2>
             <div className="flex-1 min-h-0">
               <ChatPanel
                 courseId={courseId}
