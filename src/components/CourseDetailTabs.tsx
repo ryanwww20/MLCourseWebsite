@@ -58,7 +58,7 @@ export default function CourseDetailTabs({ courseId, lessons, homework }: Course
       {activeTab === "lectures" && (
         <>
           {lessons.length > 0 ? (
-            <LessonList lessons={lessons} courseId={courseId} />
+            <LessonList lessons={lessons} courseId={courseId} onEditSuccess={() => router.refresh()} />
           ) : (
             <p className="text-muted text-center py-8">尚無課程章節</p>
           )}

@@ -14,13 +14,13 @@ export default function AddLectureModal({ open, onClose, onSuccess }: AddLecture
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [form, setForm] = useState({
-    id: "",
     courseId: "",
     title: "",
     week: "",
     date: "",
     videoCount: "0",
     materialLinks: "",
+    videoLink: "",
     youtubeLink: "",
     pptLink: "",
     pdfLink: "",
@@ -49,13 +49,13 @@ export default function AddLectureModal({ open, onClose, onSuccess }: AddLecture
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: form.id,
           courseId: form.courseId,
           title: form.title,
           week: Number(form.week),
           date: form.date,
           videoCount: Number(form.videoCount) || 0,
           materialLinks,
+          videoLink: form.videoLink || undefined,
           youtubeLink: form.youtubeLink || undefined,
           pptLink: form.pptLink || undefined,
           pdfLink: form.pdfLink || undefined,
@@ -65,7 +65,7 @@ export default function AddLectureModal({ open, onClose, onSuccess }: AddLecture
       if (!res.ok) throw new Error(data.error || "新增失敗");
       onSuccess?.();
       onClose();
-      setForm({ id: "", courseId: "", title: "", week: "", date: "", videoCount: "0", materialLinks: "", youtubeLink: "", pptLink: "", pdfLink: "" });
+      setForm({ courseId: "", title: "", week: "", date: "", videoCount: "0", materialLinks: "", videoLink: "", youtubeLink: "", pptLink: "", pdfLink: "" });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "新增失敗");
     } finally {
@@ -81,10 +81,6 @@ export default function AddLectureModal({ open, onClose, onSuccess }: AddLecture
       <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl border border-border bg-surface shadow-xl p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">新增 Lecture</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">id *</label>
-            <input required value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background" placeholder="lesson-1" />
-          </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">courseId *</label>
             <select required value={form.courseId} onChange={(e) => setForm((f) => ({ ...f, courseId: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background">
@@ -104,8 +100,8 @@ export default function AddLectureModal({ open, onClose, onSuccess }: AddLecture
               <input required type="number" value={form.week} onChange={(e) => setForm((f) => ({ ...f, week: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">date * (YYYY-MM-DD)</label>
-              <input required value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background" placeholder="2026-02-15" />
+              <label className="block text-sm font-medium text-foreground mb-1">date *</label>
+              <input required type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background" />
             </div>
           </div>
           <div>
@@ -115,6 +111,10 @@ export default function AddLectureModal({ open, onClose, onSuccess }: AddLecture
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">materialLinks（多個請換行或逗號）</label>
             <textarea value={form.materialLinks} onChange={(e) => setForm((f) => ({ ...f, materialLinks: e.target.value }))} rows={2} className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background resize-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">影片播放連結 (videoLink)</label>
+            <input value={form.videoLink} onChange={(e) => setForm((f) => ({ ...f, videoLink: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background" type="url" placeholder="YouTube 或直連影片網址" />
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">youtubeLink</label>

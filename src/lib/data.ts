@@ -22,7 +22,8 @@ export function getLessons(): Lesson[] {
   const path = join(DATA_DIR, "lessons.json");
   if (!existsSync(path)) return base;
   try {
-    const raw = readFileSync(path, "utf8");
+    const raw = readFileSync(path, "utf8").trim();
+    if (!raw) return base;
     const extra = JSON.parse(raw) as Lesson[];
     return Array.isArray(extra) ? [...base, ...extra] : base;
   } catch {
@@ -68,11 +69,28 @@ function readJsonArray<T>(path: string): T[] {
   }
 }
 
+/** 僅回傳 data/lessons.json 的內容（供產生新 id 或判斷是否可編輯） */
+export function getPersistedLessons(): Lesson[] {
+  return readJsonArray<Lesson>(join(DATA_DIR, "lessons.json"));
+}
+
 export function appendLesson(lesson: Lesson): void {
   ensureDataDir();
   const path = join(DATA_DIR, "lessons.json");
   const existing = readJsonArray<Lesson>(path);
   writeFileSync(path, JSON.stringify([...existing, lesson], null, 2), "utf8");
+}
+
+/** 更新 data/lessons.json 中指定 id 的 lecture；僅能更新已寫入檔案中的項目。回傳是否找到並更新。 */
+export function updateLesson(id: string, updates: Partial<Lesson>): boolean {
+  const path = join(DATA_DIR, "lessons.json");
+  const list = readJsonArray<Lesson>(path);
+  const idx = list.findIndex((l) => l.id === id);
+  if (idx === -1) return false;
+  list[idx] = { ...list[idx], ...updates, id: list[idx].id };
+  ensureDataDir();
+  writeFileSync(path, JSON.stringify(list, null, 2), "utf8");
+  return true;
 }
 
 export function appendHomework(hw: Homework): void {
