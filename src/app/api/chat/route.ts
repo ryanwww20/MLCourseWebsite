@@ -50,47 +50,64 @@ export async function POST(request: NextRequest) {
 
     // 若已設定 ML2026 RAG 後端，直接轉發到該 API
     if (RAG_BACKEND_URL) {
-      const ragPayload: Record<string, unknown> = {
-        query: message.trim(),
-        conversation_id: conversation_id || null,
-      };
-      if (video_name) {
-        ragPayload.video_context = {
-          video_name,
-          timestamp: videoTimestamp || null,
+      try {
+        const ragPayload: Record<string, unknown> = {
+          query: message.trim(),
+          conversation_id: conversation_id || null,
         };
-      }
-      if (image && image_mime_type) {
-        ragPayload.image = image;
-        ragPayload.image_mime_type = image_mime_type;
-      }
+        if (video_name) {
+          ragPayload.video_context = {
+            video_name,
+            timestamp: videoTimestamp || null,
+          };
+        }
+        if (image && image_mime_type) {
+          ragPayload.image = image;
+          ragPayload.image_mime_type = image_mime_type;
+        }
 
-      const ragRes = await fetch(`${RAG_BACKEND_URL}/api/query`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ragPayload),
-        signal: AbortSignal.timeout(5 * 60 * 1000), // 5 min
-      });
+        const ragRes = await fetch(`${RAG_BACKEND_URL}/api/query`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(ragPayload),
+          signal: AbortSignal.timeout(5 * 60 * 1000), // 5 min
+        });
 
-      const ragData = (await ragRes.json()) as {
-        response?: string | null;
-        conversation_id?: string;
-        steps?: unknown[];
-        error?: string;
-      };
+        const ragData = (await ragRes.json()) as {
+          response?: string | null;
+          conversation_id?: string;
+          steps?: unknown[];
+          error?: string;
+        };
 
-      if (!ragRes.ok) {
+        if (!ragRes.ok) {
+          return NextResponse.json(
+            { error: ragData.error ?? "RAG 後端錯誤", details: String(ragRes.status) },
+            { status: ragRes.status >= 500 ? 502 : ragRes.status }
+          );
+        }
+
+        return NextResponse.json({
+          content: ragData.response ?? "(No response)",
+          conversation_id: ragData.conversation_id ?? undefined,
+          steps: ragData.steps,
+        });
+      } catch (e) {
+        const cause = e instanceof Error ? e.cause : undefined;
+        const isConnectionRefused =
+          cause instanceof Error &&
+          "code" in cause &&
+          (cause as NodeJS.ErrnoException).code === "ECONNREFUSED";
         return NextResponse.json(
-          { error: ragData.error ?? "RAG 後端錯誤", details: String(ragRes.status) },
-          { status: ragRes.status >= 500 ? 502 : ragRes.status }
+          {
+            error: "無法連線至 RAG 後端",
+            hint: isConnectionRefused
+              ? `請確認 RAG 後端已啟動（${RAG_BACKEND_URL}），或移除 .env 中的 RAG_BACKEND_URL 以改用本地 RAG。`
+              : String(e instanceof Error ? e.message : e),
+          },
+          { status: 503 }
         );
       }
-
-      return NextResponse.json({
-        content: ragData.response ?? "(No response)",
-        conversation_id: ragData.conversation_id ?? undefined,
-        steps: ragData.steps,
-      });
     }
 
     const hfKey = process.env.HUGGINGFACE_API_KEY;
