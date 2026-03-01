@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import { homework, type HomeworkLink, type HomeworkLinkItem } from "@/mock/homework";
-import { courses } from "@/mock/courses";
+import EditHomeworkButton from "@/components/EditHomeworkButton";
+import { getHomework, getCourses } from "@/lib/data";
+import { type HomeworkLink, type HomeworkLinkItem } from "@/mock/homework";
 import { notFound } from "next/navigation";
 
 /** 將 Video/Slides/Code/Platform 統一成陣列，方便遍歷多個連結 */
@@ -29,6 +30,8 @@ interface HomeworkDetailPageProps {
 
 export default async function HomeworkDetailPage({ params }: HomeworkDetailPageProps) {
   const { courseId, homeworkId } = await params;
+  const homework = getHomework();
+  const courses = getCourses();
   const hw = homework.find((h) => h.id === homeworkId && h.courseId === courseId);
   const course = courses.find((c) => c.id === courseId);
 
@@ -49,12 +52,15 @@ export default async function HomeworkDetailPage({ params }: HomeworkDetailPageP
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-        <Link
-          href={`/courses/${courseId}?tab=homework`}
-          className="text-sm text-muted hover:text-foreground mb-6 inline-block"
-        >
-          ← 返回 Homework 列表
-        </Link>
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <Link
+            href={`/courses/${courseId}?tab=homework`}
+            className="text-sm text-muted hover:text-foreground inline-block"
+          >
+            ← 返回 Homework 列表
+          </Link>
+          <EditHomeworkButton homework={hw} />
+        </div>
 
         <div className="rounded-2xl border border-border bg-surface shadow-sm overflow-hidden">
           <div className="px-6 py-5 border-b border-border">

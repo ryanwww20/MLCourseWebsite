@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import LessonList from "@/components/LessonList";
 import HomeworkList from "@/components/HomeworkList";
 import { Lesson } from "@/mock/lessons";
@@ -15,6 +15,7 @@ interface CourseDetailTabsProps {
 
 export default function CourseDetailTabs({ courseId, lessons, homework }: CourseDetailTabsProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const tabFromUrl = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<"lectures" | "homework">(
     tabFromUrl === "homework" ? "homework" : "lectures"
@@ -67,7 +68,7 @@ export default function CourseDetailTabs({ courseId, lessons, homework }: Course
       {activeTab === "homework" && (
         <>
           {homework.length > 0 ? (
-            <HomeworkList courseId={courseId} homework={homework} />
+            <HomeworkList courseId={courseId} homework={homework} onEditSuccess={() => router.refresh()} />
           ) : (
             <p className="text-muted text-center py-8">尚無作業</p>
           )}
