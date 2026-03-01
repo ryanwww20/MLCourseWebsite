@@ -1,11 +1,27 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Component, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
+
+/** README §4: Error Boundary 防止 malformed LaTeX 導致整棵 component tree 崩潰 */
+class MarkdownErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? <p className="text-sm text-muted">內容無法正確渲染（可能含不合法的 LaTeX）。</p>;
+    }
+    return this.props.children;
+  }
+}
 
 export interface Message {
   id: string;
@@ -171,6 +187,15 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [attachedImageBase64, setAttachedImageBase64] = useState<string | null>(null);
+  const [attachedImageMimeType, setAttachedImageMimeType] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  /** README §5: steps 陣列（thinking, rag_retrieval, tool_call, tool_result），可摺疊顯示 */
+  const [lastSteps, setLastSteps] = useState<Array<{ type: string; content?: string; function?: string; arguments?: unknown }>>([]);
+  const [lastMessageIdWithSteps, setLastMessageIdWithSteps] = useState<string | null>(null);
+  const [stepsOpen, setStepsOpen] = useState(false);
+  /** README §6: 錯誤訊息（400/500/network），顯示後可重試 */
+  const [sendError, setSendError] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -347,11 +372,93 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
       setConversationId(null);
     }
     setMessages([DEFAULT_WELCOME]);
+    setLastSteps([]);
+    setLastMessageIdWithSteps(null);
+    setSendError(null);
   };
 
   const insertTimestamp = () => {
     const timestamp = `[${formatTime(currentVideoTime)}] `;
     setInput((prev) => timestamp + prev);
+  };
+
+  const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+  const MAX_IMAGE_LONGEST_SIDE = 1024; // README: resize client-side to reduce payload and token cost
+
+  /** README: strip "data:image/png;base64," prefix → 純 base64 */
+  const toPureBase64 = (dataUrl: string): string => {
+    if (dataUrl.startsWith("data:") && dataUrl.includes(",")) {
+      return dataUrl.split(",")[1] ?? dataUrl;
+    }
+    return dataUrl;
+  };
+
+  /** README flow: 1) select file 2) resize (max 1024px longest) 3) convert to base64, strip prefix */
+  const fileToBase64 = (file: File): Promise<{ base64: string; mimeType: string }> => {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement("img");
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width, height } = img;
+        if (width > MAX_IMAGE_LONGEST_SIDE || height > MAX_IMAGE_LONGEST_SIDE) {
+          if (width >= height) {
+            height = Math.round((height * MAX_IMAGE_LONGEST_SIDE) / width);
+            width = MAX_IMAGE_LONGEST_SIDE;
+          } else {
+            width = Math.round((width * MAX_IMAGE_LONGEST_SIDE) / height);
+            height = MAX_IMAGE_LONGEST_SIDE;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas 2d not available"));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const mimeType = file.type || "image/jpeg";
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("toBlob failed"));
+              return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+              const dataUrl = reader.result as string;
+              resolve({ base64: toPureBase64(dataUrl), mimeType });
+            };
+            reader.onerror = () => reject(new Error("FileReader error"));
+            reader.readAsDataURL(blob);
+          },
+          mimeType,
+          0.9
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Image load failed"));
+      };
+      img.src = url;
+    });
+  };
+
+  const handleAttachImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !ALLOWED_IMAGE_TYPES.includes(file.type)) return;
+    e.target.value = "";
+    fileToBase64(file)
+      .then(({ base64, mimeType }) => {
+        setAttachedImageBase64(base64);
+        setAttachedImageMimeType(mimeType);
+      })
+      .catch(() => {
+        setAttachedImageBase64(null);
+        setAttachedImageMimeType(null);
+      });
   };
 
   const insertCommentTimestamp = () => {
@@ -376,6 +483,8 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
     return "這是一個很好的問題！根據您提到的內容，我建議您可以參考課程教材中的相關章節，或者查看相關的補充資料。如果還有其他問題，歡迎繼續提問！";
   };
 
+  const FETCH_TIMEOUT_MS = 5 * 60 * 1000; // README §6: 至少 5 分鐘
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -393,39 +502,81 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+    setSendError(null);
 
     try {
       const payload: Record<string, unknown> = {
-        courseId,
-        lessonId,
-        message: cleanContent,
-        videoTimestamp: videoTimestamp ?? formatVideoTimestamp(currentVideoTime),
-        conversation_id: conversationId ?? undefined,
+        query: cleanContent,
+        conversation_id: conversationId ?? null,
       };
-      if (lessonTitle) payload.video_name = lessonTitle;
+      if (lessonTitle != null && lessonTitle !== "") {
+        const timestamp =
+          videoTimestamp != null
+            ? videoTimestamp
+            : currentVideoTime > 0
+              ? formatVideoTimestamp(currentVideoTime)
+              : null;
+        payload.video_context = { video_name: lessonTitle, timestamp };
+      }
+      if (attachedImageBase64 && attachedImageMimeType) {
+        payload.image = attachedImageBase64;
+        payload.image_mime_type = attachedImageMimeType;
+      }
+      setAttachedImageBase64(null);
+      setAttachedImageMimeType(null);
+      payload.courseId = courseId;
+      payload.lessonId = lessonId;
 
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
-      const data = await res.json() as { content?: string; conversation_id?: string; error?: string; details?: string };
+      const data = (await res.json()) as {
+        response?: string | null;
+        content?: string | null;
+        conversation_id?: string;
+        steps?: Array<{ type: string; content?: string; function?: string; arguments?: unknown }>;
+        error?: string;
+        details?: string;
+      };
 
       if (!res.ok) {
-        throw new Error(data.error || data.details || "Request failed");
+        const msg = data.error || data.details || "Request failed";
+        if (res.status === 400) {
+          setSendError(msg);
+        } else {
+          setSendError(`${msg}（可點「重試」再送一次）`);
+        }
+        setIsLoading(false);
+        return;
       }
 
       if (data.conversation_id) setConversationId(data.conversation_id);
 
+      const responseText = data.response ?? data.content ?? "(No response)";
+      const assistantId = (Date.now() + 1).toString();
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: assistantId,
         role: "assistant",
-        content: data.content ?? "抱歉，我暫時無法產生回覆。",
+        content: responseText,
         timestamp: new Date().toLocaleTimeString("zh-TW"),
       };
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch {
-      // RAG API 不可用時 fallback 到 mock
+      setLastSteps(Array.isArray(data.steps) ? data.steps : []);
+      setLastMessageIdWithSteps(assistantId);
+      setStepsOpen(false);
+    } catch (err) {
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      const isNetwork = err instanceof TypeError && (err.message === "Failed to fetch" || err.message.includes("network"));
+      if (isAbort) {
+        setSendError("請求逾時（最長 5 分鐘），請再試一次。");
+      } else if (isNetwork) {
+        setSendError("無法連線，請檢查網路後重試。");
+      } else {
+        setSendError("送出失敗，請稍後重試。");
+      }
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -506,19 +657,45 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
           >
             {message.role === "assistant" ? (
               <div className="max-w-[80%]">
-                <div className="prose prose-sm max-w-none">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkMath]}
-                    rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
-                </div>
+                <MarkdownErrorBoundary>
+                  <div className="prose prose-sm max-w-none">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkMath]}
+                      rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+                    >
+                      {message.content ?? ""}
+                    </ReactMarkdown>
+                  </div>
+                </MarkdownErrorBoundary>
                 {message.videoTimestamp && (
                   <div className="mt-2">
                     <span className="text-xs px-1.5 py-0.5 bg-foreground/10 text-muted rounded">
                       {message.videoTimestamp}
                     </span>
+                  </div>
+                )}
+                {lastMessageIdWithSteps === message.id && lastSteps.length > 0 && (
+                  <div className="mt-3 border border-border rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setStepsOpen((o) => !o)}
+                      className="w-full px-3 py-2 text-left text-sm text-muted hover:text-foreground hover:bg-foreground/5 flex items-center justify-between"
+                    >
+                      <span>{lastSteps.length} steps（thinking & tool use）</span>
+                      <span className="text-xs">{stepsOpen ? "▲" : "▼"}</span>
+                    </button>
+                    {stepsOpen && (
+                      <div className="px-3 pb-3 pt-0 space-y-2 max-h-48 overflow-y-auto text-xs font-mono bg-foreground/5">
+                        {lastSteps.map((step, i) => (
+                          <div key={i} className="rounded p-2 bg-background border border-border">
+                            <span className="font-semibold text-foreground">{step.type}</span>
+                            {step.function != null && <span className="ml-1 text-muted">→ {step.function}</span>}
+                            {step.content != null && <pre className="mt-1 whitespace-pre-wrap break-words text-muted">{step.content}</pre>}
+                            {step.arguments != null && <pre className="mt-1 whitespace-pre-wrap break-words text-muted">{JSON.stringify(step.arguments)}</pre>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -550,15 +727,55 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
         <div ref={messagesEndRef} />
       </div>
 
+      {sendError && (
+        <div className="mx-4 mb-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-700 dark:text-red-300 flex items-center justify-between gap-2">
+          <span>{sendError}</span>
+          <button
+            type="button"
+            onClick={() => setSendError(null)}
+            className="flex-shrink-0 px-2 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-700 dark:text-red-300"
+          >
+            關閉
+          </button>
+        </div>
+      )}
+
       <div className="px-4 pb-4 flex-shrink-0">
         <div className="border border-border rounded-xl p-3 space-y-2">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-wrap gap-1">
             <button
+              type="button"
               onClick={insertTimestamp}
               className="px-3 py-1.5 text-sm bg-foreground/10 hover:bg-foreground/20 rounded-md transition-colors text-foreground"
             >
               插入時間戳
             </button>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={handleAttachImage}
+            />
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              className="px-3 py-1.5 text-sm bg-foreground/10 hover:bg-foreground/20 rounded-md transition-colors text-foreground"
+            >
+              附加圖片
+            </button>
+            {attachedImageBase64 && (
+              <span className="text-xs text-muted flex items-center gap-1">
+                已附加 1 張圖片
+                <button
+                  type="button"
+                  onClick={() => { setAttachedImageBase64(null); setAttachedImageMimeType(null); }}
+                  className="text-foreground hover:underline"
+                >
+                  移除
+                </button>
+              </span>
+            )}
             <span className="text-xs text-muted">
               目前時間: {formatTime(currentVideoTime)}
             </span>

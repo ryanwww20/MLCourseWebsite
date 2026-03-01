@@ -7,13 +7,15 @@ const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL?.replace(/\/$/, "");
  * 前端「新對話」時呼叫，之後同一 conversation_id 的下一則訊息會視為新對話。
  */
 export async function POST(request: NextRequest) {
-  if (!RAG_BACKEND_URL) {
-    return NextResponse.json({ status: "ok" });
-  }
-
   try {
     const body = (await request.json()) as { conversation_id?: string | null };
     const conversation_id = body.conversation_id ?? null;
+
+    console.log("[POST /api/conversation/new] Request body:", JSON.stringify({ conversation_id }));
+
+    if (!RAG_BACKEND_URL) {
+      return NextResponse.json({ status: "ok" });
+    }
 
     if (!conversation_id) {
       return NextResponse.json({ status: "ok" });

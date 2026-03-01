@@ -6,18 +6,26 @@ const HF_MODEL_DEFAULT = "meta-llama/Llama-3.2-3B-Instruct";
 
 const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL?.replace(/\/$/, ""); // e.g. http://localhost:5010
 
+/** ML2026 RAG 後端格式（見 ML2026-RAG/README.md） */
 export interface ChatRequestBody {
-  courseId: string;
-  lessonId?: string;
-  message: string;
-  videoTimestamp?: string;
-  /** 多輪對話：第一次不傳，之後帶上後端回傳的 conversation_id */
+  /** 使用者文字訊息（必填） */
+  query?: string;
+  /** 延續對話用；首次不傳或 null */
   conversation_id?: string | null;
-  /** 目前觀看的課程／影片名稱，供 ML2026 RAG 後端做 video_context */
-  video_name?: string | null;
-  /** base64 圖片（不含 data URI 前綴），選填 */
+  /** 目前影片脈絡：video_name（章節標題）、timestamp（MM:SS 或 H:MM:SS） */
+  video_context?: {
+    video_name?: string | null;
+    timestamp?: string | null;
+  } | null;
+  /** base64 圖片（不含 data URI 前綴） */
   image?: string | null;
   image_mime_type?: string | null;
+  /** 以下為相容舊版或 Next.js 本地 RAG 使用 */
+  courseId?: string;
+  lessonId?: string;
+  message?: string;
+  videoTimestamp?: string;
+  video_name?: string | null;
 }
 
 function buildRAGContext(chunks: { title: string; content: string }[]): string {
@@ -30,40 +38,52 @@ function buildRAGContext(chunks: { title: string; content: string }[]): string {
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as ChatRequestBody;
-    const {
-      courseId,
-      lessonId,
-      message,
-      videoTimestamp,
-      conversation_id,
-      video_name,
-      image,
-      image_mime_type,
-    } = body;
+    const queryText = (body.query ?? body.message ?? "").trim();
+    const courseId = body.courseId ?? "";
+    const lessonId = body.lessonId;
 
-    if (!courseId || !message?.trim()) {
+    // Debug: 印出 request body，image 只顯示前 80 字元+...；轉給後端時仍送完整 base64
+    const debugBody = { ...body } as Record<string, unknown>;
+    if (typeof debugBody.image === "string") {
+      const s = debugBody.image;
+      debugBody.image = s.length <= 80 ? s : `${s.slice(0, 80)}...`;
+    }
+    console.log("[POST /api/chat] Request body:", JSON.stringify(debugBody, null, 2));
+
+    if (!queryText) {
       return NextResponse.json(
-        { error: "缺少 courseId 或 message" },
+        { error: "缺少 query 或 message" },
         { status: 400 }
       );
     }
 
-    // 若已設定 ML2026 RAG 後端，直接轉發到該 API
+    // 若已設定 ML2026 RAG 後端，依 README 格式轉發
     if (RAG_BACKEND_URL) {
       try {
         const ragPayload: Record<string, unknown> = {
-          query: message.trim(),
-          conversation_id: conversation_id || null,
+          query: queryText,
+          conversation_id: body.conversation_id ?? null,
         };
-        if (video_name) {
+        // README: video_context 為 { video_name, timestamp }
+        if (body.video_context && (body.video_context.video_name != null || body.video_context.timestamp != null)) {
           ragPayload.video_context = {
-            video_name,
-            timestamp: videoTimestamp || null,
+            video_name: body.video_context.video_name ?? null,
+            timestamp: body.video_context.timestamp ?? null,
+          };
+        } else if (body.video_name != null || body.videoTimestamp != null) {
+          ragPayload.video_context = {
+            video_name: body.video_name ?? null,
+            timestamp: body.videoTimestamp ?? null,
           };
         }
-        if (image && image_mime_type) {
-          ragPayload.image = image;
-          ragPayload.image_mime_type = image_mime_type;
+        if (body.image && body.image_mime_type) {
+          // README: base64 string, no data URI prefix — 若前端誤帶 data:image/...;base64, 則在此剝掉
+          let base64 = String(body.image).trim();
+          if (base64.includes(",")) {
+            base64 = base64.split(",")[1] ?? base64;
+          }
+          ragPayload.image = base64;
+          ragPayload.image_mime_type = body.image_mime_type;
         }
 
         const ragRes = await fetch(`${RAG_BACKEND_URL}/api/query`, {
@@ -123,8 +143,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // RAG：從知識庫檢索相關片段
-    const chunks = retrieveChunks(message.trim(), courseId, lessonId, 5);
+    // 本地 RAG：從知識庫檢索相關片段
+    const videoTimestamp = body.video_context?.timestamp ?? body.videoTimestamp;
+    const chunks = retrieveChunks(queryText, courseId, lessonId ?? undefined, 5);
     const context = buildRAGContext(chunks);
 
     const timeHint = videoTimestamp
@@ -139,7 +160,7 @@ ${timeHint}
 
 回答時簡潔、友善，必要時可列點或使用 Markdown。`;
 
-    const userContent = message.trim();
+    const userContent = queryText;
 
     if (hfKey) {
       // 使用 Hugging Face Router（OpenAI 相容 API）：https://router.huggingface.co
