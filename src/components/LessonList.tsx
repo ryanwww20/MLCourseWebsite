@@ -1,5 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useState } from "react";
 import { Lesson } from "@/mock/lessons";
+import EditLectureModal from "@/components/EditLectureModal";
 
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -8,6 +13,7 @@ const iconImgClass = "w-5 h-5 object-contain opacity-80 hover:opacity-100 transi
 interface LessonListProps {
   lessons: Lesson[];
   courseId: string;
+  onEditSuccess?: () => void;
 }
 
 function formatDate(dateStr: string) {
@@ -15,7 +21,11 @@ function formatDate(dateStr: string) {
   return `${MONTH_ABBR[m - 1]} ${d}`;
 }
 
-export default function LessonList({ lessons, courseId }: LessonListProps) {
+export default function LessonList({ lessons, courseId, onEditSuccess }: LessonListProps) {
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
+  const [editLesson, setEditLesson] = useState<Lesson | null>(null);
+
   return (
     <div className="space-y-3">
       {lessons.map((lesson) => (
@@ -69,9 +79,24 @@ export default function LessonList({ lessons, courseId }: LessonListProps) {
                 <img src="/icons/icon-pdf.png" alt="" className={iconImgClass} width={20} height={20} />
               </a>
             )}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); setEditLesson(lesson); }}
+                className="px-3 py-1.5 text-sm border border-border rounded-lg text-foreground hover:bg-foreground/5"
+              >
+                編輯
+              </button>
+            )}
           </div>
         </div>
       ))}
+      <EditLectureModal
+        open={!!editLesson}
+        onClose={() => setEditLesson(null)}
+        onSuccess={() => { onEditSuccess?.(); setEditLesson(null); }}
+        lesson={editLesson}
+      />
     </div>
   );
 }

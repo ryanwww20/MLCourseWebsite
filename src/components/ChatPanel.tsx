@@ -16,7 +16,12 @@ export interface Message {
 }
 
 const CHAT_STORAGE_PREFIX = "chat:";
+const CHAT_TABS_PREFIX = "chat-tabs:";
 const COMMENT_STORAGE_PREFIX = "comments:";
+
+function generateTabId(): string {
+  return `t${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
 
 export interface Comment {
   id: string;
@@ -32,13 +37,64 @@ const DEFAULT_WELCOME: Message = {
   timestamp: "",
 };
 
-function getStorageKey(userId: string | null, courseId: string, lessonId: string): string | null {
-  if (!userId) return null;
-  return `${CHAT_STORAGE_PREFIX}${userId}:${courseId}:${lessonId}`;
+/** 每個 tab 的對話用 courseId:lessonId:tabId 儲存 */
+function getChatStorageKey(courseId: string, lessonId: string, tabId: string): string {
+  return `${CHAT_STORAGE_PREFIX}${courseId}:${lessonId}:${tabId}`;
 }
 
-function loadChatFromStorage(key: string | null): Message[] | null {
-  if (!key || typeof window === "undefined") return null;
+function getChatTabsStorageKey(courseId: string, lessonId: string): string {
+  return `${CHAT_TABS_PREFIX}${courseId}:${lessonId}`;
+}
+
+const TAB_TITLE_MAX_LEN = 14;
+
+/** 從對話中擷取第一則使用者訊息的摘要作為 tab 標題 */
+function getSummaryFromMessages(messages: Message[]): string | null {
+  const firstUser = messages.find((m) => m.role === "user");
+  if (!firstUser?.content) return null;
+  const stripped = firstUser.content.replace(/\[\d{2}:\d{2}\]\s*/, "").trim();
+  if (!stripped) return null;
+  if (stripped.length <= TAB_TITLE_MAX_LEN) return stripped;
+  return stripped.slice(0, TAB_TITLE_MAX_LEN) + "…";
+}
+
+interface ChatTabsData {
+  tabIds: string[];
+  titles: Record<string, string>;
+}
+
+function loadChatTabsFromStorage(courseId: string, lessonId: string): ChatTabsData {
+  if (typeof window === "undefined") return { tabIds: [], titles: {} };
+  try {
+    const raw = localStorage.getItem(getChatTabsStorageKey(courseId, lessonId));
+    if (!raw) return { tabIds: [], titles: {} };
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return { tabIds: parsed, titles: {} };
+    }
+    if (parsed && Array.isArray(parsed.tabIds) && parsed.tabIds.length > 0) {
+      return {
+        tabIds: parsed.tabIds,
+        titles: typeof parsed.titles === "object" && parsed.titles !== null ? parsed.titles : {},
+      };
+    }
+    return { tabIds: [], titles: {} };
+  } catch {
+    return { tabIds: [], titles: {} };
+  }
+}
+
+function saveChatTabsToStorage(courseId: string, lessonId: string, data: ChatTabsData) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(getChatTabsStorageKey(courseId, lessonId), JSON.stringify(data));
+  } catch {
+    // ignore
+  }
+}
+
+function loadChatFromStorage(key: string): Message[] | null {
+  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
@@ -49,8 +105,8 @@ function loadChatFromStorage(key: string | null): Message[] | null {
   }
 }
 
-function saveChatToStorage(key: string | null, messages: Message[]) {
-  if (!key || typeof window === "undefined") return;
+function saveChatToStorage(key: string, messages: Message[]) {
+  if (typeof window === "undefined") return;
   try {
     localStorage.setItem(key, JSON.stringify(messages));
   } catch {
@@ -91,6 +147,8 @@ interface ChatPanelProps {
   currentVideoTime: number;
   /** 登入使用者的 id，有值時會依使用者＋課程＋章節儲存聊天記錄 */
   userId?: string | null;
+  /** 僅顯示單一區塊時使用；未傳則顯示分頁（AI 助教 / 留言區） */
+  mode?: "chat" | "comments";
 }
 
 /** 將秒數轉成 RAG 接受的時間格式：MM:SS 或 H:MM:SS */
@@ -104,31 +162,120 @@ function formatVideoTimestamp(seconds: number): string {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-export default function ChatPanel({ courseId, lessonId, lessonTitle = null, currentVideoTime, userId = null }: ChatPanelProps) {
-  const storageKey = getStorageKey(userId ?? null, courseId, lessonId);
-  const [messages, setMessages] = useState<Message[]>([DEFAULT_WELCOME]);
+export default function ChatPanel({ courseId, lessonId, lessonTitle = null, currentVideoTime, userId = null, mode }: ChatPanelProps) {
+  const [tabIds, setTabIds] = useState<string[]>([]);
+  const [titlesByTab, setTitlesByTab] = useState<Record<string, string>>({});
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [messagesByTab, setMessagesByTab] = useState<Record<string, Message[]>>({});
+  const [hasLoadedTabs, setHasLoadedTabs] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chat" | "comments">("chat");
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
-  // 載入該使用者在此課程／章節的歷史記錄
-  useEffect(() => {
-    const stored = loadChatFromStorage(storageKey ?? null);
-    if (stored) setMessages(stored);
-    setHasLoaded(true);
-  }, [storageKey]);
+  /** 目前選中 tab 的對話（供顯示與送訊） */
+  const messages = activeTabId ? (messagesByTab[activeTabId] ?? [DEFAULT_WELCOME]) : [];
+  const setMessages = (updater: Message[] | ((prev: Message[]) => Message[])) => {
+    if (!activeTabId) return;
+    setMessagesByTab((prev) => {
+      const next = { ...prev };
+      const nextList = typeof updater === "function" ? updater(next[activeTabId] ?? [DEFAULT_WELCOME]) : updater;
+      next[activeTabId] = nextList;
+      return next;
+    });
+  };
 
-  // 有登入且已載入後，每次 messages 變更就寫入 localStorage
+  /** 未傳 mode 時同時顯示 AI 助教與留言區（上下排列）；傳 mode 時只顯示該區塊 */
+  const showChat = !mode || mode === "chat";
+  const showComments = !mode || mode === "comments";
+
+  // 載入此課程／章節的 tab 列表、標題與各 tab 對話
   useEffect(() => {
-    if (!hasLoaded || !storageKey) return;
-    saveChatToStorage(storageKey, messages);
-  }, [messages, hasLoaded, storageKey]);
+    const { tabIds: ids, titles } = loadChatTabsFromStorage(courseId, lessonId);
+    if (ids.length === 0) {
+      const firstId = generateTabId();
+      setTabIds([firstId]);
+      setTitlesByTab({});
+      setActiveTabId(firstId);
+      setMessagesByTab({ [firstId]: [DEFAULT_WELCOME] });
+      saveChatTabsToStorage(courseId, lessonId, { tabIds: [firstId], titles: {} });
+    } else {
+      setTabIds(ids);
+      setTitlesByTab(titles);
+      setActiveTabId(ids[0]);
+      const byTab: Record<string, Message[]> = {};
+      ids.forEach((id) => {
+        const stored = loadChatFromStorage(getChatStorageKey(courseId, lessonId, id));
+        byTab[id] = stored && stored.length > 0 ? stored : [DEFAULT_WELCOME];
+      });
+      setMessagesByTab(byTab);
+    }
+    setHasLoadedTabs(true);
+  }, [courseId, lessonId]);
+
+  // tab 列表與標題變更時寫回
+  useEffect(() => {
+    if (!hasLoadedTabs || tabIds.length === 0) return;
+    saveChatTabsToStorage(courseId, lessonId, { tabIds, titles: titlesByTab });
+  }, [tabIds, titlesByTab, hasLoadedTabs, courseId, lessonId]);
+
+  // 當某 tab 有新的使用者訊息時，依第一則使用者訊息更新該 tab 標題
+  useEffect(() => {
+    if (!hasLoadedTabs) return;
+    let updated = false;
+    const nextTitles = { ...titlesByTab };
+    tabIds.forEach((tabId) => {
+      const list = messagesByTab[tabId];
+      if (!list) return;
+      const summary = getSummaryFromMessages(list);
+      if (summary != null && nextTitles[tabId] !== summary) {
+        nextTitles[tabId] = summary;
+        updated = true;
+      }
+    });
+    if (updated) setTitlesByTab(nextTitles);
+  }, [messagesByTab, hasLoadedTabs, tabIds]);
+
+  // 當前 tab 的對話變更時寫入 localStorage
+  useEffect(() => {
+    if (!hasLoadedTabs || !activeTabId) return;
+    const list = messagesByTab[activeTabId];
+    if (list) saveChatToStorage(getChatStorageKey(courseId, lessonId, activeTabId), list);
+  }, [messagesByTab, activeTabId, hasLoadedTabs, courseId, lessonId]);
+
+  const getTabTitle = (tabId: string, index: number): string => {
+    return titlesByTab[tabId] ?? `對話 ${index + 1}`;
+  };
+
+  const addChatTab = () => {
+    const newId = generateTabId();
+    setTabIds((prev) => [...prev, newId]);
+    setActiveTabId(newId);
+    setMessagesByTab((prev) => ({ ...prev, [newId]: [DEFAULT_WELCOME] }));
+  };
+
+  const removeChatTab = (tabId: string) => {
+    if (tabIds.length <= 1) return;
+    const newIds = tabIds.filter((id) => id !== tabId);
+    setTabIds(newIds);
+    setTitlesByTab((prev) => {
+      const next = { ...prev };
+      delete next[tabId];
+      return next;
+    });
+    setMessagesByTab((prev) => {
+      const next = { ...prev };
+      delete next[tabId];
+      return next;
+    });
+    if (activeTabId === tabId && newIds.length > 0) {
+      const oldIdx = tabIds.indexOf(tabId);
+      setActiveTabId(newIds[Math.min(oldIdx, newIds.length - 1)] ?? newIds[0]);
+    }
+  };
 
   // 切換課程／章節時清掉 RAG 對話 id，視為新對話
   useEffect(() => {
@@ -153,13 +300,18 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
     scrollToBottom();
   }, [messages]);
 
+  // 切換 tab 時清空輸入框，避免誤送到別的分頁
+  useEffect(() => {
+    setInput("");
+  }, [activeTabId]);
+
   const scrollCommentsToBottom = () => {
     commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
-    if (activeTab === "comments") scrollCommentsToBottom();
-  }, [activeTab, comments]);
+    if (showComments) scrollCommentsToBottom();
+  }, [showComments, comments]);
 
   const handleSubmitComment = () => {
     const content = commentInput.trim();
@@ -290,36 +442,62 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
 
   return (
     <div className="flex flex-col h-full bg-surface border border-transparent rounded-lg overflow-hidden">
-      <div className="border-b border-border flex-shrink-0">
-        <div className="flex items-center">
-          <button
-            type="button"
-            onClick={() => setActiveTab("chat")}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === "chat" ? "text-foreground border-b-2 border-accent bg-transparent" : "text-muted hover:text-foreground"}`}
-          >
-            AI 助教
-          </button>
-          {activeTab === "chat" && (
-            <button
-              type="button"
-              onClick={startNewChat}
-              className="px-3 py-1.5 text-xs text-muted hover:text-foreground hover:bg-foreground/10 rounded transition-colors"
-            >
-              新對話
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setActiveTab("comments")}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === "comments" ? "text-foreground border-b-2 border-accent bg-transparent" : "text-muted hover:text-foreground"}`}
-          >
-            留言區
-          </button>
+      {showChat && (
+        <>
+      {/* 可橫向滑動的 tab 列，右側為新增 tab 按鈕；關閉鈕 hover 時顯示並覆蓋標題右側 */}
+      <div className="flex items-center border-b border-border flex-shrink-0 min-h-0">
+        <div className="flex-1 min-w-0 overflow-x-auto overflow-y-hidden">
+          <div className="flex items-center gap-1 py-1.5 px-2">
+            {tabIds.map((tabId, index) => (
+              <div
+                key={tabId}
+                className={`group relative flex-shrink-0 rounded-t-md ${activeTabId === tabId ? "bg-surface border border-b-0 border-border -mb-px" : ""}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setActiveTabId(tabId)}
+                  className={`w-full pl-3 pr-7 py-1.5 text-sm text-left rounded-t-md whitespace-nowrap transition-colors ${activeTabId === tabId ? "text-foreground font-medium" : "text-muted hover:text-foreground hover:bg-foreground/5"}`}
+                >
+                  <span className="block truncate max-w-[8rem]" title={getTabTitle(tabId, index)}>
+                    {getTabTitle(tabId, index)}
+                  </span>
+                </button>
+                {tabIds.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); removeChatTab(tabId); }}
+                    className="absolute right-0.5 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity text-muted hover:text-foreground hover:bg-foreground/10 bg-surface border border-transparent"
+                    aria-label="關閉分頁"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                      <path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={startNewChat}
+          className="flex-shrink-0 px-2 py-1.5 text-xs text-muted hover:text-foreground hover:bg-foreground/10 rounded transition-colors"
+        >
+          新對話
+        </button>
+        <button
+          type="button"
+          onClick={addChatTab}
+          className="flex-shrink-0 p-2 m-1 rounded-md text-muted hover:text-foreground hover:bg-foreground/10 transition-colors"
+          aria-label="新增對話"
+          title="新增對話"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+            <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+          </svg>
+        </button>
       </div>
 
-      {activeTab === "chat" && (
-        <>
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-4 min-h-0">
         {messages.map((message) => (
           <div
@@ -420,7 +598,7 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
         </>
       )}
 
-      {activeTab === "comments" && (
+      {showComments && (
         <>
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-3 min-h-0">
         {comments.length === 0 ? (
