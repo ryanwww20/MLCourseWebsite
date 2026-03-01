@@ -5,7 +5,8 @@ const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep
 
 const newsItems = [
   { date: "2026-02-10", title: "網站上線", description: "機器學習課程 AI 輔助學習系統正式上線。", href: "" },
-  { date: "2026-02-08", title: "課程地圖開放", description: "Course Map 已開放，可查看課程架構。", href: "/course_map" },
+  // Course Map 尚未上線，先隱藏
+  // { date: "2026-02-08", title: "課程地圖開放", description: "Course Map 已開放，可查看課程架構。", href: "/course_map" },
 ];
 
 function formatNewsDate(dateStr: string) {

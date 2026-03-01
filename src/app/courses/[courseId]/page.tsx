@@ -1,8 +1,6 @@
 import Navbar from "@/components/Navbar";
 import CourseDetailTabs from "@/components/CourseDetailTabs";
-import { courses } from "@/mock/courses";
-import { homework } from "@/mock/homework";
-import { lessons } from "@/mock/lessons";
+import { getCourses, getLessons, getHomework } from "@/lib/data";
 import { notFound } from "next/navigation";
 
 interface CourseDetailPageProps {
@@ -13,6 +11,9 @@ interface CourseDetailPageProps {
 
 export default async function CourseDetailPage({ params }: CourseDetailPageProps) {
   const { courseId } = await params;
+  const courses = getCourses();
+  const lessons = getLessons();
+  const homework = getHomework();
   const course = courses.find((c) => c.id === courseId);
   const courseLessons = lessons.filter((l) => l.courseId === courseId);
   const courseHomework = homework.filter((h) => h.courseId === courseId);

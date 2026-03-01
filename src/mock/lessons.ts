@@ -6,7 +6,9 @@ export interface Lesson {
   date: string;
   videoCount: number;
   materialLinks: string[];
-  /** YouTube 影片連結 */
+  /** 影片播放連結（YouTube 或直連影片，用於課程頁內嵌播放） */
+  videoLink?: string;
+  /** YouTube 影片連結（列表等處可另用） */
   youtubeLink?: string;
   /** 投影片（PPT）連結 */
   pptLink?: string;

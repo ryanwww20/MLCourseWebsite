@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
+import AddLectureModal from "@/components/AddLectureModal";
+import AddHomeworkModal from "@/components/AddHomeworkModal";
 
 interface NavbarProps {
   variant?: "default" | "onDark";
@@ -11,9 +13,13 @@ interface NavbarProps {
 
 export default function Navbar({ variant = "default" }: NavbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [lectureModalOpen, setLectureModalOpen] = useState(false);
+  const [homeworkModalOpen, setHomeworkModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
   const onDark = variant === "onDark";
   const textActive = onDark ? "text-white" : "text-foreground";
   const textInactive = onDark ? "text-white/70 hover:text-white" : "text-muted hover:text-foreground";
@@ -52,7 +58,7 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
   };
 
   return (
-    <nav className={navBg}>
+    <nav className={`sticky top-0 z-50 ${navBg}`}>
       <div className="sm:px-6 lg:px-8">
         <div className="flex h-16 items-center">
 
@@ -60,7 +66,7 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
           <Link href="/home" className="flex items-center gap-3">
             <div className={`h-8 w-8 rounded-md ${onDark ? "bg-white/20" : "bg-foreground/10"}`} />
             <span className={`text-lg font-bold ${textActive}`}>
-              LAB LAND
+              ML Website
             </span>
           </Link>
 
@@ -68,7 +74,9 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
           <div className="ml-10 flex items-center gap-8">
             <NavItem href="/home" label="Home" />
             <NavItem href="/courses" label="Courses" />
+            {/* Course Map 尚未上線，先隱藏
             <NavItem href="/course_map" label="Course Map" />
+            */}
           </div>
           
           {/* 右側：登入 / 使用者 */}
@@ -111,6 +119,31 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
                     <div className="px-4 py-2 border-b border-border">
                       <p className="text-xs text-muted truncate">{session.user.email}</p>
                     </div>
+                    {isAdmin && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => { setDropdownOpen(false); setLectureModalOpen(true); }}
+                          className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                        >
+                          新增 Lecture
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setDropdownOpen(false); setHomeworkModalOpen(true); }}
+                          className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                        >
+                          新增 Homework
+                        </button>
+                      </>
+                    )}
+                    <Link
+                      href="/settings"
+                      onClick={() => setDropdownOpen(false)}
+                      className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                    >
+                      設定
+                    </Link>
                     <button
                       type="button"
                       onClick={() => { setDropdownOpen(false); signOut(); }}
@@ -134,6 +167,8 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
           </div>
         </div>
       </div>
+      <AddLectureModal open={lectureModalOpen} onClose={() => setLectureModalOpen(false)} onSuccess={() => router.refresh()} />
+      <AddHomeworkModal open={homeworkModalOpen} onClose={() => setHomeworkModalOpen(false)} onSuccess={() => router.refresh()} />
     </nav>
   );
 }

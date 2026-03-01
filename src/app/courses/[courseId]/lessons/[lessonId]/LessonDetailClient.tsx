@@ -5,13 +5,16 @@ import { useSession } from "next-auth/react";
 import Navbar from "@/components/Navbar";
 import VideoPlayer from "@/components/VideoPlayer";
 import ChatPanel from "@/components/ChatPanel";
+import EditLectureButton from "@/components/EditLectureButton";
+import type { Lesson } from "@/mock/lessons";
 
 interface LessonDetailClientProps {
   courseId: string;
   lessonId: string;
+  lesson: Lesson;
 }
 
-export default function LessonDetailClient({ courseId, lessonId }: LessonDetailClientProps) {
+export default function LessonDetailClient({ courseId, lessonId, lesson }: LessonDetailClientProps) {
   const { data: session } = useSession();
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
   const userId = session?.user?.email ?? null;
@@ -24,9 +27,12 @@ export default function LessonDetailClient({ courseId, lessonId }: LessonDetailC
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(320px,400px)] lg:grid-rows-[auto_1fr] gap-6 lg:min-h-[calc(100vh-8rem)]">
           {/* 影片區（左上） */}
           <div className="lg:pr-2">
-            <h1 className="text-2xl font-bold text-foreground mb-4">課程影片</h1>
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <h1 className="text-2xl font-bold text-foreground">課程影片</h1>
+              <EditLectureButton lesson={lesson} />
+            </div>
             <div className="aspect-video">
-              <VideoPlayer onTimeUpdate={setCurrentVideoTime} />
+              <VideoPlayer src={lesson.videoLink ?? lesson.youtubeLink} onTimeUpdate={setCurrentVideoTime} />
             </div>
           </div>
 
