@@ -25,7 +25,7 @@ export const lessons: Lesson[] = [
     date: "2026-02-15",
     videoCount: 2,
     materialLinks: ["https://example.com/slides/week1.pdf", "https://example.com/homework/week1.pdf"],
-    youtubeLink: "https://www.youtube.com/watch?v=example1",
+    youtubeLink: "https://youtu.be/QLiKmca4kzI?si=p695HEwPDBgeV-3P",
     pptLink: "https://example.com/slides/week1.pptx",
     pdfLink: "https://example.com/slides/week1.pdf",
   },

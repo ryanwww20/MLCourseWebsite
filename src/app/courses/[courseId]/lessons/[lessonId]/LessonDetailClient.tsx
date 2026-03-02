@@ -43,6 +43,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson }: Lesso
               <ChatPanel
                 courseId={courseId}
                 lessonId={lessonId}
+                lessonTitle={lesson.title}
                 currentVideoTime={currentVideoTime}
                 userId={userId}
                 mode="comments"
@@ -56,6 +57,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson }: Lesso
               <ChatPanel
                 courseId={courseId}
                 lessonId={lessonId}
+                lessonTitle={lesson.title}
                 currentVideoTime={currentVideoTime}
                 userId={userId}
                 mode="chat"
