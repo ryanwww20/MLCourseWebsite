@@ -101,7 +101,9 @@ export default function HomePage() {
       <section className="w-full bg-surface">
         <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl font-bold text-foreground mb-4">Contact</h2>
-          <p className="text-muted">如有問題或建議，歡迎與我們聯繫。</p>
+          <p className="text-foreground font-medium text-3xl">✉</p>
+          <p><a href="mailto:ntu-ml-2026-spring-ta@googlegroups.com">ntu-ml-2026-spring-ta@googlegroups.com</a></p>
+          <p className="text-foreground font-medium">  </p>
         </div>
       </section>
     </div>
