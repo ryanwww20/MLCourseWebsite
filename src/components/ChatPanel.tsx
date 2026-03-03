@@ -33,7 +33,6 @@ export interface Message {
 
 const CHAT_STORAGE_PREFIX = "chat:";
 const CHAT_TABS_PREFIX = "chat-tabs:";
-const COMMENT_STORAGE_PREFIX = "comments:";
 
 function generateTabId(): string {
   return `t${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -127,31 +126,6 @@ function saveChatToStorage(key: string, messages: Message[]) {
     localStorage.setItem(key, JSON.stringify(messages));
   } catch {
     // ignore quota or parse errors
-  }
-}
-
-function getCommentStorageKey(courseId: string, lessonId: string): string {
-  return `${COMMENT_STORAGE_PREFIX}${courseId}:${lessonId}`;
-}
-
-function loadCommentsFromStorage(courseId: string, lessonId: string): Comment[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(getCommentStorageKey(courseId, lessonId));
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as Comment[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCommentsToStorage(courseId: string, lessonId: string, comments: Comment[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(getCommentStorageKey(courseId, lessonId), JSON.stringify(comments));
-  } catch {
-    // ignore
   }
 }
 
@@ -377,31 +351,13 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
     setConversationId(null);
   }, [courseId, lessonId]);
 
-  // 載入此課程／章節的留言（登入用 API，未登入用 localStorage）
+  // 載入此課程／章節的共用留言（所有人看到同一份，不需登入）
   useEffect(() => {
-    if (userId) {
-      const params = new URLSearchParams({ courseId, lessonId });
-      fetch(`/api/user/comments?${params}`, { credentials: "include" })
-        .then((res) => (res.ok ? res.json() : Promise.resolve({ comments: [] })))
-        .then((body: { comments?: Comment[] }) => setComments(Array.isArray(body.comments) ? body.comments : []));
-    } else {
-      setComments(loadCommentsFromStorage(courseId, lessonId));
-    }
-  }, [courseId, lessonId, userId]);
-
-  // 留言變更時寫入（登入用 API，未登入用 localStorage）
-  useEffect(() => {
-    if (userId) {
-      fetch("/api/user/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ courseId, lessonId, comments }),
-      }).catch(() => {});
-    } else {
-      saveCommentsToStorage(courseId, lessonId, comments);
-    }
-  }, [courseId, lessonId, comments, userId]);
+    const params = new URLSearchParams({ courseId, lessonId });
+    fetch(`/api/comments?${params}`)
+      .then((res) => (res.ok ? res.json() : Promise.resolve({ comments: [] })))
+      .then((body: { comments?: Comment[] }) => setComments(Array.isArray(body.comments) ? body.comments : []));
+  }, [courseId, lessonId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -424,18 +380,24 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
     if (showComments) scrollCommentsToBottom();
   }, [showComments, comments]);
 
-  const handleSubmitComment = () => {
+  const handleSubmitComment = async () => {
     const content = commentInput.trim();
     if (!content) return;
-    const author = session?.user?.name ?? session?.user?.email ?? "訪客";
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      content,
-      author,
-      createdAt: new Date().toLocaleString("zh-TW"),
-    };
-    setComments((prev) => [...prev, newComment]);
     setCommentInput("");
+    try {
+      const res = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ courseId, lessonId, content }),
+      });
+      const data = (await res.json()) as { comment?: Comment; error?: string };
+      if (res.ok && data.comment) {
+        setComments((prev) => [...prev, data.comment!]);
+      }
+    } catch {
+      // 失敗時可選擇把 content 塞回 input 或提示錯誤
+    }
   };
 
   const formatTime = (seconds: number): string => {

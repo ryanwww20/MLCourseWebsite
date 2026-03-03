@@ -28,17 +28,9 @@ export interface Message {
   videoTimestamp?: string;
 }
 
-export interface Comment {
-  id: string;
-  content: string;
-  author: string;
-  createdAt: string;
-}
-
 interface UserDataFile {
   chatTabs?: Record<string, ChatTabsData>;
   chats?: Record<string, Message[]>;
-  comments?: Record<string, Comment[]>;
 }
 
 function userFilePath(userId: string): string {
@@ -83,10 +75,6 @@ function tabsKey(courseId: string, lessonId: string): string {
 
 function chatKey(courseId: string, lessonId: string, tabId: string): string {
   return `${courseId}:${lessonId}:${tabId}`;
-}
-
-function commentsKey(courseId: string, lessonId: string): string {
-  return `${courseId}:${lessonId}`;
 }
 
 export function getChatTabs(userId: string, courseId: string, lessonId: string): ChatTabsData {
@@ -136,23 +124,5 @@ export function saveChat(
   const data = readUserData(userId);
   if (!data.chats) data.chats = {};
   data.chats[chatKey(courseId, lessonId, tabId)] = messages;
-  writeUserData(userId, data);
-}
-
-export function getComments(userId: string, courseId: string, lessonId: string): Comment[] {
-  const data = readUserData(userId);
-  const arr = data.comments?.[commentsKey(courseId, lessonId)];
-  return Array.isArray(arr) ? arr : [];
-}
-
-export function saveComments(
-  userId: string,
-  courseId: string,
-  lessonId: string,
-  comments: Comment[]
-): void {
-  const data = readUserData(userId);
-  if (!data.comments) data.comments = {};
-  data.comments[commentsKey(courseId, lessonId)] = comments;
   writeUserData(userId, data);
 }
