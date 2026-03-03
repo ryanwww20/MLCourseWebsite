@@ -51,13 +51,13 @@ export const authOptions: NextAuthOptions = {
       }
     },
     jwt({ token, user }) {
-      if (user && "role" in user) token.role = (user as { role?: string }).role;
+      if (user?.role) token.role = user.role;
       return token;
     },
     session({ session, token }) {
       if (session.user) {
         session.user.image = token.picture ?? session.user.image;
-        (session.user as { role?: string }).role = token.role as string | undefined;
+        session.user.role = token.role;
       }
       return session;
     },

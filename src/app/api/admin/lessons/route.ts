@@ -1,5 +1,4 @@
 import { getServerSession } from "next-auth";
-import type { Session } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { appendLesson, getPersistedLessons, updateLesson } from "@/lib/data";
@@ -19,8 +18,8 @@ function parseRelatedCourseLinks(v: unknown): RelatedCourseLink[] {
     .filter((x): x is RelatedCourseLink => x !== null);
 }
 
-function isAdmin(session: Session | null): boolean {
-  return (session?.user as { role?: string } | undefined)?.role === "admin";
+function isAdmin(session: { user?: { role?: string } } | null): boolean {
+  return session?.user?.role === "admin";
 }
 
 export async function POST(req: Request) {

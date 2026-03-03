@@ -33,7 +33,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
   const { data: session } = useSession();
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
-  const userId = session?.user?.email ?? null;
+  const userId = session?.user?.id ?? session?.user?.email ?? null;
 
   return (
     <div className="min-h-screen bg-background">

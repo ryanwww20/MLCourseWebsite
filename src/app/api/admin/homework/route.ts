@@ -1,12 +1,11 @@
 import { getServerSession } from "next-auth";
-import type { Session } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { getHomework, appendHomework, updateHomework } from "@/lib/data";
 import type { Homework, HomeworkLinkItem } from "@/mock/homework";
 
-function isAdmin(session: Session | null): boolean {
-  return (session?.user as { role?: string } | undefined)?.role === "admin";
+function isAdmin(session: { user?: { role?: string } } | null): boolean {
+  return session?.user?.role === "admin";
 }
 
 function buildLinks(

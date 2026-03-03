@@ -217,8 +217,59 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
   const showChat = !mode || mode === "chat";
   const showComments = !mode || mode === "comments";
 
-  // 載入此課程／章節的 tab 列表、標題與各 tab 對話
+  // 載入此課程／章節的 tab 列表、標題與各 tab 對話（登入用 API，未登入用 localStorage）
   useEffect(() => {
+    let cancelled = false;
+
+    if (userId) {
+      const params = new URLSearchParams({ courseId, lessonId });
+      fetch(`/api/user/chat-tabs?${params}`, { credentials: "include" })
+        .then((res) => (res.ok ? res.json() : Promise.resolve({ tabIds: [], titles: {} })))
+        .then((data: { tabIds?: string[]; titles?: Record<string, string> }) => {
+          if (cancelled) return;
+          const ids = Array.isArray(data.tabIds) && data.tabIds.length > 0 ? data.tabIds : [];
+          const titles = data.titles && typeof data.titles === "object" ? data.titles : {};
+          if (ids.length === 0) {
+            const firstId = generateTabId();
+            setTabIds([firstId]);
+            setTitlesByTab({});
+            setActiveTabId(firstId);
+            setMessagesByTab({ [firstId]: [DEFAULT_WELCOME] });
+            setHasLoadedTabs(true);
+            return;
+          }
+          setTabIds(ids);
+          setTitlesByTab(titles);
+          setActiveTabId(ids[0]);
+          const byTab: Record<string, Message[]> = {};
+          Promise.all(
+            ids.map((id) =>
+              fetch(`/api/user/chat?${new URLSearchParams({ courseId, lessonId, tabId: id })}`, { credentials: "include" })
+                .then((r) => (r.ok ? r.json() : Promise.resolve({ messages: [] })))
+                .then((body: { messages?: Message[] }) => ({ id, messages: body.messages ?? [] }))
+            )
+          ).then((results) => {
+            if (cancelled) return;
+            results.forEach(({ id, messages }) => {
+              byTab[id] = messages.length > 0 ? messages : [DEFAULT_WELCOME];
+            });
+            setMessagesByTab(byTab);
+            setHasLoadedTabs(true);
+          });
+        })
+        .catch(() => {
+          if (!cancelled) {
+            const firstId = generateTabId();
+            setTabIds([firstId]);
+            setTitlesByTab({});
+            setActiveTabId(firstId);
+            setMessagesByTab({ [firstId]: [DEFAULT_WELCOME] });
+            setHasLoadedTabs(true);
+          }
+        });
+      return () => { cancelled = true; };
+    }
+
     const { tabIds: ids, titles } = loadChatTabsFromStorage(courseId, lessonId);
     if (ids.length === 0) {
       const firstId = generateTabId();
@@ -239,13 +290,22 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
       setMessagesByTab(byTab);
     }
     setHasLoadedTabs(true);
-  }, [courseId, lessonId]);
+  }, [courseId, lessonId, userId]);
 
-  // tab 列表與標題變更時寫回
+  // tab 列表與標題變更時寫回（登入用 API，未登入用 localStorage）
   useEffect(() => {
     if (!hasLoadedTabs || tabIds.length === 0) return;
-    saveChatTabsToStorage(courseId, lessonId, { tabIds, titles: titlesByTab });
-  }, [tabIds, titlesByTab, hasLoadedTabs, courseId, lessonId]);
+    if (userId) {
+      fetch("/api/user/chat-tabs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ courseId, lessonId, tabIds, titles: titlesByTab }),
+      }).catch(() => {});
+    } else {
+      saveChatTabsToStorage(courseId, lessonId, { tabIds, titles: titlesByTab });
+    }
+  }, [tabIds, titlesByTab, hasLoadedTabs, courseId, lessonId, userId]);
 
   // 當某 tab 有新的使用者訊息時，依第一則使用者訊息更新該 tab 標題
   useEffect(() => {
@@ -264,12 +324,22 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
     if (updated) setTitlesByTab(nextTitles);
   }, [messagesByTab, hasLoadedTabs, tabIds]);
 
-  // 當前 tab 的對話變更時寫入 localStorage
+  // 當前 tab 的對話變更時寫入（登入用 API，未登入用 localStorage）
   useEffect(() => {
     if (!hasLoadedTabs || !activeTabId) return;
     const list = messagesByTab[activeTabId];
-    if (list) saveChatToStorage(getChatStorageKey(courseId, lessonId, activeTabId), list);
-  }, [messagesByTab, activeTabId, hasLoadedTabs, courseId, lessonId]);
+    if (!list) return;
+    if (userId) {
+      fetch("/api/user/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ courseId, lessonId, tabId: activeTabId, messages: list }),
+      }).catch(() => {});
+    } else {
+      saveChatToStorage(getChatStorageKey(courseId, lessonId, activeTabId), list);
+    }
+  }, [messagesByTab, activeTabId, hasLoadedTabs, courseId, lessonId, userId]);
 
   const getTabTitle = (tabId: string, index: number): string => {
     return titlesByTab[tabId] ?? `對話 ${index + 1}`;
@@ -307,15 +377,31 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
     setConversationId(null);
   }, [courseId, lessonId]);
 
-  // 載入此課程／章節的留言
+  // 載入此課程／章節的留言（登入用 API，未登入用 localStorage）
   useEffect(() => {
-    setComments(loadCommentsFromStorage(courseId, lessonId));
-  }, [courseId, lessonId]);
+    if (userId) {
+      const params = new URLSearchParams({ courseId, lessonId });
+      fetch(`/api/user/comments?${params}`, { credentials: "include" })
+        .then((res) => (res.ok ? res.json() : Promise.resolve({ comments: [] })))
+        .then((body: { comments?: Comment[] }) => setComments(Array.isArray(body.comments) ? body.comments : []));
+    } else {
+      setComments(loadCommentsFromStorage(courseId, lessonId));
+    }
+  }, [courseId, lessonId, userId]);
 
-  // 留言變更時寫入 localStorage
+  // 留言變更時寫入（登入用 API，未登入用 localStorage）
   useEffect(() => {
-    saveCommentsToStorage(courseId, lessonId, comments);
-  }, [courseId, lessonId, comments]);
+    if (userId) {
+      fetch("/api/user/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ courseId, lessonId, comments }),
+      }).catch(() => {});
+    } else {
+      saveCommentsToStorage(courseId, lessonId, comments);
+    }
+  }, [courseId, lessonId, comments, userId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
