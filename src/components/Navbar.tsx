@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import AddLectureModal from "@/components/AddLectureModal";
 import AddHomeworkModal from "@/components/AddHomeworkModal";
+import AddCourseModal from "@/components/AddCourseModal";
 
 interface NavbarProps {
   variant?: "default" | "onDark";
@@ -18,6 +19,7 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [lectureModalOpen, setLectureModalOpen] = useState(false);
   const [homeworkModalOpen, setHomeworkModalOpen] = useState(false);
+  const [courseModalOpen, setCourseModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
   const onDark = variant === "onDark";
@@ -123,6 +125,13 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
                       <>
                         <button
                           type="button"
+                          onClick={() => { setDropdownOpen(false); setCourseModalOpen(true); }}
+                          className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                        >
+                          新增 Course
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => { setDropdownOpen(false); setLectureModalOpen(true); }}
                           className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
                         >
@@ -167,6 +176,7 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
           </div>
         </div>
       </div>
+      <AddCourseModal open={courseModalOpen} onClose={() => setCourseModalOpen(false)} onSuccess={() => router.refresh()} />
       <AddLectureModal open={lectureModalOpen} onClose={() => setLectureModalOpen(false)} onSuccess={() => router.refresh()} />
       <AddHomeworkModal open={homeworkModalOpen} onClose={() => setHomeworkModalOpen(false)} onSuccess={() => router.refresh()} />
     </nav>

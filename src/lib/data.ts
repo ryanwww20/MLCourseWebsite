@@ -14,7 +14,29 @@ function ensureDataDir() {
 }
 
 export function getCourses(): Course[] {
-  return [...mockCourses];
+  const base = [...mockCourses];
+  const path = join(DATA_DIR, "courses.json");
+  if (!existsSync(path)) return base;
+  try {
+    const raw = readFileSync(path, "utf8").trim();
+    if (!raw) return base;
+    const extra = JSON.parse(raw) as Course[];
+    return Array.isArray(extra) ? [...base, ...extra] : base;
+  } catch {
+    return base;
+  }
+}
+
+/** 僅回傳 data/courses.json 的內容（供產生新 id 或判斷是否可編輯） */
+export function getPersistedCourses(): Course[] {
+  return readJsonArray<Course>(join(DATA_DIR, "courses.json"));
+}
+
+export function appendCourse(course: Course): void {
+  ensureDataDir();
+  const path = join(DATA_DIR, "courses.json");
+  const existing = readJsonArray<Course>(path);
+  writeFileSync(path, JSON.stringify([...existing, course], null, 2), "utf8");
 }
 
 export function getLessons(): Lesson[] {

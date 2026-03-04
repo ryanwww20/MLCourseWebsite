@@ -1,3 +1,9 @@
+/** 相關課程連結（admin 可編輯） */
+export interface RelatedCourseLink {
+  label: string;
+  url: string;
+}
+
 export interface Lesson {
   id: string;
   courseId: string;
@@ -14,6 +20,8 @@ export interface Lesson {
   pptLink?: string;
   /** PDF 連結 */
   pdfLink?: string;
+  /** 相關課程連結（本講頁「相關課程連結」區塊，admin 可編輯） */
+  relatedCourseLinks?: RelatedCourseLink[];
 }
 
 export const lessons: Lesson[] = [

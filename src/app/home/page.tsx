@@ -97,7 +97,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4. Contact — 佔滿橫幅 */}
+      {/* Website credits — TAs who built this site (English) */}
+      <section className="w-full border-b border-border bg-surface">
+        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl font-bold text-foreground mb-2">Credits</h2>
+          <p className="text-muted-foreground text-sm mb-4">This site was built by the course teaching assistants.</p>
+          <p className="text-foreground text-sm">上官世昀 · 鄭席鈞 · 陳拓之 · 蔡尚麟 · 郭彥均</p>
+        </div>
+      </section>
+
+      {/* 5. Contact — 佔滿橫幅 */}
       <section className="w-full bg-surface">
         <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl font-bold text-foreground mb-4">Contact</h2>
