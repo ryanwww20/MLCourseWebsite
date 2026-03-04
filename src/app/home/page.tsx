@@ -100,7 +100,7 @@ export default function HomePage() {
       {/* Website credits — TAs who built this site (English) */}
       <section className="w-full border-b border-border bg-surface">
         <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold text-foreground mb-2">TAs who built this site</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-2">Credits</h2>
           <p className="text-muted-foreground text-sm mb-4">This site was built by the course teaching assistants.</p>
           <p className="text-foreground text-sm">上官世昀 · 鄭席鈞 · 陳拓之 · 蔡尚麟 · 郭彥均</p>
         </div>
