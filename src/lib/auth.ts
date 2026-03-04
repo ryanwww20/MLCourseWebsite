@@ -40,16 +40,20 @@ export const authOptions: NextAuthOptions = {
   useSecureCookies: !isLocalhost,
   callbacks: {
     redirect({ url, baseUrl }) {
-      const BASE = "/course";
-      const base = baseUrl.replace(/\/$/, "");
-      const fallback = `${base}/home`;
-      const want = url.startsWith("/") ? `${base}${url}` : url;
+      const origin = new URL(baseUrl).origin;
+      const SITE = `${origin}/course`;
+      const fallback = `${SITE}/home`;
+
+      if (url.startsWith("/")) {
+        const abs = url.startsWith("/course") ? `${origin}${url}` : `${SITE}${url}`;
+        return abs;
+      }
+
       try {
-        const wantUrl = new URL(want);
-        const baseUrl_ = new URL(base);
-        if (wantUrl.origin !== baseUrl_.origin) return fallback;
-        if (!wantUrl.pathname.startsWith(BASE)) return fallback;
-        return want;
+        const parsed = new URL(url);
+        if (parsed.origin !== origin) return fallback;
+        if (!parsed.pathname.startsWith("/course")) return fallback;
+        return url;
       } catch {
         return fallback;
       }
