@@ -1,8 +1,9 @@
 import Navbar from "@/components/Navbar";
 import CourseCard from "@/components/CourseCard";
-import { courses } from "@/mock/courses";
+import { getCourses } from "@/lib/data";
 
 export default function CoursesPage() {
+  const courses = getCourses();
   const ongoing = courses.filter((c) => c.status === "ongoing");
   const previous = courses.filter((c) => c.status === "previous");
 

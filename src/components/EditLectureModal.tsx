@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { Course } from "@/mock/courses";
-import type { Lesson } from "@/mock/lessons";
+import type { Lesson, RelatedCourseLink } from "@/mock/lessons";
 
 interface EditLectureModalProps {
   open: boolean;
@@ -31,6 +31,7 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [form, setForm] = useState<Record<string, string>>({});
+  const [relatedCourseLinks, setRelatedCourseLinks] = useState<RelatedCourseLink[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -45,6 +46,7 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
   useEffect(() => {
     if (open && lesson) {
       setForm(lessonToForm(lesson));
+      setRelatedCourseLinks(Array.isArray(lesson.relatedCourseLinks) ? [...lesson.relatedCourseLinks] : []);
     }
   }, [open, lesson]);
 
@@ -73,6 +75,7 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
           youtubeLink: form.youtubeLink || undefined,
           pptLink: form.pptLink || undefined,
           pdfLink: form.pdfLink || undefined,
+          relatedCourseLinks: relatedCourseLinks.filter((l) => l.url.trim()),
         }),
       });
       const data = await res.json();
@@ -144,6 +147,52 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">pdfLink</label>
             <input value={form.pdfLink ?? ""} onChange={(e) => setForm((f) => ({ ...f, pdfLink: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background" type="url" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">相關課程連結</label>
+            <p className="text-xs text-muted-foreground mb-2">顯示於本講頁「相關課程連結」區塊，可新增多筆（標題 + 連結）</p>
+            <div className="space-y-2">
+              {relatedCourseLinks.map((link, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    value={link.label}
+                    onChange={(e) => {
+                      const next = [...relatedCourseLinks];
+                      next[i] = { ...next[i], label: e.target.value };
+                      setRelatedCourseLinks(next);
+                    }}
+                    placeholder="標題"
+                    className="flex-1 min-w-0 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                  />
+                  <input
+                    value={link.url}
+                    onChange={(e) => {
+                      const next = [...relatedCourseLinks];
+                      next[i] = { ...next[i], url: e.target.value };
+                      setRelatedCourseLinks(next);
+                    }}
+                    placeholder="https://..."
+                    type="url"
+                    className="flex-1 min-w-0 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setRelatedCourseLinks((prev) => prev.filter((_, j) => j !== i))}
+                    className="p-2 text-muted-foreground hover:text-foreground rounded"
+                    aria-label="刪除此筆"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setRelatedCourseLinks((prev) => [...prev, { label: "", url: "" }])}
+                className="text-sm px-3 py-1.5 border border-border rounded-lg text-foreground hover:bg-foreground/5"
+              >
+                ＋ 新增一筆
+              </button>
+            </div>
           </div>
           {submitError && <p className="text-sm text-red-600">{submitError}</p>}
           <div className="flex gap-2 pt-2">
