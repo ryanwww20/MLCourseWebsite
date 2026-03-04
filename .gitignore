@@ -38,3 +38,4 @@ next-env.d.ts
 # admin 新增的 lecture / homework 資料（可移除此行以納入版控）
 /data/
 
+/docs

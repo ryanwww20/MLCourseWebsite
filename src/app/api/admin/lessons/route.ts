@@ -19,7 +19,7 @@ function parseRelatedCourseLinks(v: unknown): RelatedCourseLink[] {
 }
 
 function isAdmin(session: { user?: { role?: string } } | null): boolean {
-  return (session?.user as { role?: string } | undefined)?.role === "admin";
+  return session?.user?.role === "admin";
 }
 
 export async function POST(req: Request) {

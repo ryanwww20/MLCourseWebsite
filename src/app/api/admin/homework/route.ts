@@ -5,7 +5,7 @@ import { getHomework, appendHomework, updateHomework } from "@/lib/data";
 import type { Homework, HomeworkLinkItem } from "@/mock/homework";
 
 function isAdmin(session: { user?: { role?: string } } | null): boolean {
-  return (session?.user as { role?: string } | undefined)?.role === "admin";
+  return session?.user?.role === "admin";
 }
 
 function buildLinks(

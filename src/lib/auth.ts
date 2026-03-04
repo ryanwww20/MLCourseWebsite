@@ -40,29 +40,37 @@ export const authOptions: NextAuthOptions = {
   useSecureCookies: !isLocalhost,
   callbacks: {
     redirect({ url, baseUrl }) {
-      const want = url.startsWith("/") ? `${baseUrl.replace(/\/$/, "")}${url}` : url;
+      const origin = new URL(baseUrl).origin;
+      const SITE = `${origin}/course`;
+      const fallback = `${SITE}/home`;
+
+      if (url.startsWith("/")) {
+        const abs = url.startsWith("/course") ? `${origin}${url}` : `${SITE}${url}`;
+        return abs;
+      }
+
       try {
-        const wantOrigin = new URL(want).origin;
-        const baseOrigin = new URL(baseUrl).origin;
-        if (wantOrigin !== baseOrigin) return baseUrl;
-        return want;
+        const parsed = new URL(url);
+        if (parsed.origin !== origin) return fallback;
+        if (!parsed.pathname.startsWith("/course")) return fallback;
+        return url;
       } catch {
-        return baseUrl;
+        return fallback;
       }
     },
     jwt({ token, user }) {
-      if (user && "role" in user) token.role = (user as { role?: string }).role;
+      if (user?.role) token.role = user.role;
       return token;
     },
     session({ session, token }) {
       if (session.user) {
         session.user.image = token.picture ?? session.user.image;
-        (session.user as { role?: string }).role = token.role as string | undefined;
+        session.user.role = token.role;
       }
       return session;
     },
   },
   pages: {
-    signIn: "/auth/signin",
+    signIn: "/course/auth/signin",
   },
 };
