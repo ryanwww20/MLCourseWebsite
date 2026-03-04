@@ -54,7 +54,7 @@ export default function HomePage() {
             Welcome To
           </p>
           <h1 className="text-2xl font-bold text-foreground sm:text-3xl md:text-4xl">
-            機器學習課程
+            機器學習課程你好
             <br />
             AI 輔助學習系統
           </h1>

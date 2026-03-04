@@ -155,7 +155,7 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => { setDropdownOpen(false); signOut(); }}
+                      onClick={() => { setDropdownOpen(false); signOut({ callbackUrl: "/home" }); }}
                       className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
                     >
                       Sign Out

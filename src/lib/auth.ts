@@ -40,14 +40,18 @@ export const authOptions: NextAuthOptions = {
   useSecureCookies: !isLocalhost,
   callbacks: {
     redirect({ url, baseUrl }) {
-      const want = url.startsWith("/") ? `${baseUrl.replace(/\/$/, "")}${url}` : url;
+      const BASE = "/course";
+      const base = baseUrl.replace(/\/$/, "");
+      const fallback = `${base}/home`;
+      const want = url.startsWith("/") ? `${base}${url}` : url;
       try {
-        const wantOrigin = new URL(want).origin;
-        const baseOrigin = new URL(baseUrl).origin;
-        if (wantOrigin !== baseOrigin) return baseUrl;
+        const wantUrl = new URL(want);
+        const baseUrl_ = new URL(base);
+        if (wantUrl.origin !== baseUrl_.origin) return fallback;
+        if (!wantUrl.pathname.startsWith(BASE)) return fallback;
         return want;
       } catch {
-        return baseUrl;
+        return fallback;
       }
     },
     jwt({ token, user }) {
@@ -63,6 +67,6 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: {
-    signIn: "/auth/signin",
+    signIn: "/course/auth/signin",
   },
 };
