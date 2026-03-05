@@ -43,8 +43,6 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
   const userId = session?.user?.id ?? session?.user?.email ?? null;
   const iconBase = useIconBase();
 
-  const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-
   const { prevLesson, nextLesson } = useMemo(() => {
     const all = [lesson, ...relatedLessons].sort((a, b) => a.week - b.week || a.id.localeCompare(b.id));
     const idx = all.findIndex((l) => l.id === lesson.id);
@@ -178,7 +176,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
                   <div className="flex items-center gap-2">
                     {prevLesson ? (
                       <Link
-                        href={`${BASE_PATH}/courses/${courseId}/lessons/${prevLesson.id}`}
+                        href={`/courses/${courseId}/lessons/${prevLesson.id}`}
                         className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border border-border text-foreground hover:bg-foreground/10 transition-colors"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
@@ -196,7 +194,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
                     )}
                     {nextLesson ? (
                       <Link
-                        href={`${BASE_PATH}/courses/${courseId}/lessons/${nextLesson.id}`}
+                        href={`/courses/${courseId}/lessons/${nextLesson.id}`}
                         className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border border-border text-foreground hover:bg-foreground/10 transition-colors"
                       >
                         下一堂

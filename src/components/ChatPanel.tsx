@@ -573,6 +573,17 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
     commentInputRef.current?.focus();
   };
 
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm("確定要刪除此留言？")) return;
+    try {
+      const params = new URLSearchParams({ courseId, lessonId, id: commentId });
+      const res = await fetch(`${BASE_PATH}/api/comments?${params}`, { method: "DELETE", credentials: "include" });
+      if (res.ok) {
+        setComments((prev) => prev.filter((c) => c.id !== commentId));
+      }
+    } catch { /* ignore */ }
+  };
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -822,6 +833,7 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
   };
 
   const { data: session } = useSession();
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
 
   return (
     <div className="flex flex-col h-full bg-surface border border-transparent rounded-lg overflow-hidden">
@@ -1142,13 +1154,24 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
               <p className="text-sm text-foreground whitespace-pre-wrap">{c.content}</p>
               <div className="flex items-center justify-between mt-1">
                 <p className="text-xs text-muted">{c.author} · {c.createdAt}</p>
-                <button
-                  type="button"
-                  onClick={() => handleReply(c)}
-                  className="text-xs text-muted hover:text-foreground transition-colors px-1.5 py-0.5 rounded hover:bg-foreground/5"
-                >
-                  回覆
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleReply(c)}
+                    className="text-xs text-muted hover:text-foreground transition-colors px-1.5 py-0.5 rounded hover:bg-foreground/5"
+                  >
+                    回覆
+                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteComment(c.id)}
+                      className="text-xs text-muted hover:text-red-600 transition-colors px-1.5 py-0.5 rounded hover:bg-red-50"
+                    >
+                      刪除
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))
