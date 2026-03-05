@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 interface AddCourseModalProps {
   open: boolean;
   onClose: () => void;
@@ -36,7 +38,7 @@ export default function AddCourseModal({ open, onClose, onSuccess }: AddCourseMo
         .split(/[\n,]/)
         .map((s) => s.trim())
         .filter(Boolean);
-      const res = await fetch("/api/admin/courses", {
+      const res = await fetch(`${BASE_PATH}/api/admin/courses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

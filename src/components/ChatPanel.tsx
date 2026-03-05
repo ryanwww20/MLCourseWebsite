@@ -31,6 +31,8 @@ export interface Message {
   videoTimestamp?: string;
 }
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 const CHAT_STORAGE_PREFIX = "chat:";
 const CHAT_TABS_PREFIX = "chat-tabs:";
 
@@ -197,7 +199,7 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
 
     if (userId) {
       const params = new URLSearchParams({ courseId, lessonId });
-      fetch(`/api/user/chat-tabs?${params}`, { credentials: "include" })
+      fetch(`${BASE_PATH}/api/user/chat-tabs?${params}`, { credentials: "include" })
         .then((res) => (res.ok ? res.json() : Promise.resolve({ tabIds: [], titles: {} })))
         .then((data: { tabIds?: string[]; titles?: Record<string, string> }) => {
           if (cancelled) return;
@@ -218,7 +220,7 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
           const byTab: Record<string, Message[]> = {};
           Promise.all(
             ids.map((id) =>
-              fetch(`/api/user/chat?${new URLSearchParams({ courseId, lessonId, tabId: id })}`, { credentials: "include" })
+              fetch(`${BASE_PATH}/api/user/chat?${new URLSearchParams({ courseId, lessonId, tabId: id })}`, { credentials: "include" })
                 .then((r) => (r.ok ? r.json() : Promise.resolve({ messages: [] })))
                 .then((body: { messages?: Message[] }) => ({ id, messages: body.messages ?? [] }))
             )
@@ -270,7 +272,7 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
   useEffect(() => {
     if (!hasLoadedTabs || tabIds.length === 0) return;
     if (userId) {
-      fetch("/api/user/chat-tabs", {
+      fetch(`${BASE_PATH}/api/user/chat-tabs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -304,7 +306,7 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
     const list = messagesByTab[activeTabId];
     if (!list) return;
     if (userId) {
-      fetch("/api/user/chat", {
+      fetch(`${BASE_PATH}/api/user/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -354,7 +356,7 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
   // 載入此課程／章節的共用留言（所有人看到同一份，不需登入）
   useEffect(() => {
     const params = new URLSearchParams({ courseId, lessonId });
-    fetch(`/api/comments?${params}`)
+    fetch(`${BASE_PATH}/api/comments?${params}`)
       .then((res) => (res.ok ? res.json() : Promise.resolve({ comments: [] })))
       .then((body: { comments?: Comment[] }) => setComments(Array.isArray(body.comments) ? body.comments : []));
   }, [courseId, lessonId]);
@@ -385,7 +387,7 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
     if (!content) return;
     setCommentInput("");
     try {
-      const res = await fetch("/api/comments", {
+      const res = await fetch(`${BASE_PATH}/api/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -409,7 +411,7 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
   const startNewChat = async () => {
     if (conversationId) {
       try {
-        await fetch("/api/conversation/new", {
+        await fetch(`${BASE_PATH}/api/conversation/new`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ conversation_id: conversationId }),
@@ -575,7 +577,7 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
       payload.courseId = courseId;
       payload.lessonId = lessonId;
 
-      const res = await fetch("/api/chat", {
+      const res = await fetch(`${BASE_PATH}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

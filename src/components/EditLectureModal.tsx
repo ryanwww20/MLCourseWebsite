@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import type { Course } from "@/mock/courses";
 import type { Lesson, RelatedCourseLink } from "@/mock/lessons";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 interface EditLectureModalProps {
   open: boolean;
   onClose: () => void;
@@ -35,7 +37,7 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
 
   useEffect(() => {
     if (open) {
-      fetch("/api/courses")
+      fetch(`${BASE_PATH}/api/courses`)
         .then((r) => r.json())
         .then(setCourses)
         .catch(() => setCourses([]));
@@ -60,7 +62,7 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
         .split(/[\n,]/)
         .map((s) => s.trim())
         .filter(Boolean);
-      const res = await fetch("/api/admin/lessons", {
+      const res = await fetch(`${BASE_PATH}/api/admin/lessons`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

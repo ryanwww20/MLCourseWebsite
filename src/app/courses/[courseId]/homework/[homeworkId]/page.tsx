@@ -39,7 +39,8 @@ export default async function HomeworkDetailPage({ params }: HomeworkDetailPageP
     notFound();
   }
 
-  /** 與 LessonList 一致，icon 尺寸略大 */
+  /** 與 LessonList 一致，icon 尺寸略大；basePath 讓 /icons/ 正確指向 /course/icons/ */
+  const iconBase = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
   const iconLinkClass = "p-1 rounded hover:bg-foreground/10";
   const iconImgClass = "w-7 h-7 object-contain opacity-80 hover:opacity-100 transition-opacity";
   const defaultVideoIcon = "/icons/icon-youtube.png";
@@ -47,6 +48,7 @@ export default async function HomeworkDetailPage({ params }: HomeworkDetailPageP
   const defaultCodeIcon = "/icons/icon-ppt.png";
   const defaultPlatformIcon = "/icons/gradescope.png";
   const ddClass = "text-sm leading-tight";
+  const iconSrc = (path: string) => `${iconBase}${path}`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -81,7 +83,7 @@ export default async function HomeworkDetailPage({ params }: HomeworkDetailPageP
                 ) : (
                   normalizeLinks(hw.video).map((item, i) => (
                     <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className={iconLinkClass} aria-label={`Video ${i + 1}`}>
-                      <img src={item.icon ?? hw.videoIcon ?? defaultVideoIcon} alt="" className={iconImgClass} width={28} height={28} />
+                      <img src={iconSrc(item.icon ?? hw.videoIcon ?? defaultVideoIcon)} alt="" className={iconImgClass} width={28} height={28} />
                     </a>
                   ))
                 )}
@@ -95,7 +97,7 @@ export default async function HomeworkDetailPage({ params }: HomeworkDetailPageP
                 ) : (
                   normalizeLinks(hw.slides).map((item, i) => (
                     <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className={iconLinkClass} aria-label={`Slides ${i + 1}`}>
-                      <img src={item.icon ?? hw.slidesIcon ?? defaultSlidesIcon} alt="" className={iconImgClass} width={28} height={28} />
+                      <img src={iconSrc(item.icon ?? hw.slidesIcon ?? defaultSlidesIcon)} alt="" className={iconImgClass} width={28} height={28} />
                     </a>
                   ))
                 )}
@@ -109,7 +111,7 @@ export default async function HomeworkDetailPage({ params }: HomeworkDetailPageP
                 ) : (
                   normalizeLinks(hw.code).map((item, i) => (
                     <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className={iconLinkClass} aria-label={`Code ${i + 1}`}>
-                      <img src={item.icon ?? hw.codeIcon ?? defaultCodeIcon} alt="" className={iconImgClass} width={28} height={28} />
+                      <img src={iconSrc(item.icon ?? hw.codeIcon ?? defaultCodeIcon)} alt="" className={iconImgClass} width={28} height={28} />
                     </a>
                   ))
                 )}
@@ -123,7 +125,7 @@ export default async function HomeworkDetailPage({ params }: HomeworkDetailPageP
                 ) : (
                   normalizeLinks(hw.platform).map((item, i) => (
                     <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" className={iconLinkClass} aria-label={`Platform ${i + 1}`}>
-                      <img src={item.icon ?? hw.platformIcon ?? defaultPlatformIcon} alt="" className={iconImgClass} width={28} height={28} />
+                      <img src={iconSrc(item.icon ?? hw.platformIcon ?? defaultPlatformIcon)} alt="" className={iconImgClass} width={28} height={28} />
                     </a>
                   ))
                 )}

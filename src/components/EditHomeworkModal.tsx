@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import type { Course } from "@/mock/courses";
 import type { Homework, HomeworkLink } from "@/mock/homework";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 interface EditHomeworkModalProps {
   open: boolean;
   onClose: () => void;
@@ -55,7 +57,7 @@ export default function EditHomeworkModal({ open, onClose, onSuccess, homework }
 
   useEffect(() => {
     if (open) {
-      fetch("/api/courses")
+      fetch(`${BASE_PATH}/api/courses`)
         .then((r) => r.json())
         .then(setCourses)
         .catch(() => setCourses([]));
@@ -90,7 +92,7 @@ export default function EditHomeworkModal({ open, onClose, onSuccess, homework }
         platform1: form.platform1 || undefined, platform2: form.platform2 || undefined, platform3: form.platform3 || undefined,
         platformIcon1: form.platformIcon1 || undefined, platformIcon2: form.platformIcon2 || undefined, platformIcon3: form.platformIcon3 || undefined,
       };
-      const res = await fetch("/api/admin/homework", {
+      const res = await fetch(`${BASE_PATH}/api/admin/homework`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

@@ -11,6 +11,12 @@ import type { Course } from "@/mock/courses";
 
 const iconImgClass = "w-5 h-5 object-contain opacity-80 hover:opacity-100 transition-opacity";
 
+/** Base path for static assets; use /course when under that path so icons load in client bundle */
+function useIconBase() {
+  if (typeof window === "undefined") return process.env.NEXT_PUBLIC_BASE_PATH ?? "/course";
+  return window.location.pathname.startsWith("/course") ? "/course" : (process.env.NEXT_PUBLIC_BASE_PATH ?? "");
+}
+
 interface LessonDetailClientProps {
   courseId: string;
   lessonId: string;
@@ -34,6 +40,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
   const userId = session?.user?.id ?? session?.user?.email ?? null;
+  const iconBase = useIconBase();
 
   return (
     <div className="min-h-screen bg-background">
@@ -90,7 +97,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
                         className="p-1 rounded hover:bg-foreground/10"
                         aria-label="YouTube"
                       >
-                        <img src="/icons/icon-youtube.png" alt="" className={iconImgClass} width={20} height={20} />
+                        <img src={`${iconBase}/icons/icon-youtube.png`} alt="" className={iconImgClass} width={20} height={20} />
                       </a>
                     )}
                     {lesson.pptLink && (
@@ -101,7 +108,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
                         className="p-1 rounded hover:bg-foreground/10"
                         aria-label="PPT"
                       >
-                        <img src="/icons/icon-ppt.png" alt="" className={iconImgClass} width={20} height={20} />
+                        <img src={`${iconBase}/icons/icon-ppt.png`} alt="" className={iconImgClass} width={20} height={20} />
                       </a>
                     )}
                     {lesson.pdfLink && (
@@ -112,7 +119,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
                         className="p-1 rounded hover:bg-foreground/10"
                         aria-label="PDF"
                       >
-                        <img src="/icons/icon-pdf.png" alt="" className={iconImgClass} width={20} height={20} />
+                        <img src={`${iconBase}/icons/icon-pdf.png`} alt="" className={iconImgClass} width={20} height={20} />
                       </a>
                     )}
                   </div>
