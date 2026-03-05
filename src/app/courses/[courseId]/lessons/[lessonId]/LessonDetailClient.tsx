@@ -1,15 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import Navbar from "@/components/Navbar";
-import VideoPlayer from "@/components/VideoPlayer";
+import VideoPlayer, { type VideoPlayerHandle } from "@/components/VideoPlayer";
 import ChatPanel from "@/components/ChatPanel";
 import EditLectureButton from "@/components/EditLectureButton";
 import type { Lesson } from "@/mock/lessons";
 import type { Course } from "@/mock/courses";
 
 const iconImgClass = "w-5 h-5 object-contain opacity-80 hover:opacity-100 transition-opacity";
+
+/** Base path for static assets; use /course when under that path so icons load in client bundle */
+function useIconBase() {
+  if (typeof window === "undefined") return process.env.NEXT_PUBLIC_BASE_PATH ?? "/course";
+  return window.location.pathname.startsWith("/course") ? "/course" : (process.env.NEXT_PUBLIC_BASE_PATH ?? "");
+}
 
 interface LessonDetailClientProps {
   courseId: string;
@@ -29,20 +35,30 @@ function HelpIcon({ className }: { className?: string }) {
   );
 }
 
+function formatTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 export default function LessonDetailClient({ courseId, lessonId, lesson, course, relatedLessons }: LessonDetailClientProps) {
   const { data: session } = useSession();
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
+  const playerRef = useRef<VideoPlayerHandle>(null);
   const userId = session?.user?.id ?? session?.user?.email ?? null;
+  const iconBase = useIconBase();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-background flex flex-col">
       <Navbar />
-      <main className="mx-auto max-w-[1920px] px-4 py-8 sm:px-6 lg:px-8">
+      <main className="flex-1 min-h-0 mx-auto w-full max-w-[1920px] px-4 py-4 sm:px-6 lg:px-8 lg:pb-4">
         {/* 桌面：左欄 影片+留言區，右欄 AI 助教；手機：影片 → 留言區 → AI 助教 */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(320px,400px)] lg:grid-rows-[auto_1fr] gap-6 lg:min-h-[calc(100vh-8rem)]">
-          {/* 影片區（左上） */}
-          <div className="lg:pr-2">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(320px,400px)] gap-6 h-full">
+          {/* 影片＋資訊＋留言（左欄，桌面可獨立捲動） */}
+          <div className="lg:overflow-y-auto lg:pr-2 lg:min-h-0">
             <div className="flex items-center justify-between gap-4 mb-4">
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold text-foreground">課程影片</h1>
@@ -58,7 +74,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
               <EditLectureButton lesson={lesson} />
             </div>
             <div className="aspect-video">
-              <VideoPlayer src={lesson.videoLink ?? lesson.youtubeLink} onTimeUpdate={setCurrentVideoTime} />
+              <VideoPlayer ref={playerRef} src={lesson.videoLink ?? lesson.youtubeLink} onTimeUpdate={setCurrentVideoTime} />
             </div>
 
             {/* Lecture 資訊區（影片下方、留言區上方） */}
@@ -90,7 +106,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
                         className="p-1 rounded hover:bg-foreground/10"
                         aria-label="YouTube"
                       >
-                        <img src="/icons/icon-youtube.png" alt="" className={iconImgClass} width={20} height={20} />
+                        <img src={`${iconBase}/icons/icon-youtube.png`} alt="" className={iconImgClass} width={20} height={20} />
                       </a>
                     )}
                     {lesson.pptLink && (
@@ -101,7 +117,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
                         className="p-1 rounded hover:bg-foreground/10"
                         aria-label="PPT"
                       >
-                        <img src="/icons/icon-ppt.png" alt="" className={iconImgClass} width={20} height={20} />
+                        <img src={`${iconBase}/icons/icon-ppt.png`} alt="" className={iconImgClass} width={20} height={20} />
                       </a>
                     )}
                     {lesson.pdfLink && (
@@ -112,10 +128,43 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
                         className="p-1 rounded hover:bg-foreground/10"
                         aria-label="PDF"
                       >
-                        <img src="/icons/icon-pdf.png" alt="" className={iconImgClass} width={20} height={20} />
+                        <img src={`${iconBase}/icons/icon-pdf.png`} alt="" className={iconImgClass} width={20} height={20} />
                       </a>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Extra Material */}
+              {lesson.extraMaterials && lesson.extraMaterials.length > 0 && (
+                <div className="mt-5 pt-4 border-t border-border">
+                  <h3 className="text-sm font-semibold text-foreground mb-2">Extra Material</h3>
+                  <ul className="space-y-1.5">
+                    {lesson.extraMaterials.map((mat, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        {mat.type === "video" ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-muted-foreground flex-shrink-0">
+                            <polygon points="23 7 16 12 23 17 23 7" />
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-muted-foreground flex-shrink-0">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                            <path d="M8 21h8" />
+                            <path d="M12 17v4" />
+                          </svg>
+                        )}
+                        <a
+                          href={mat.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline text-sm truncate"
+                        >
+                          {mat.title || mat.url}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
@@ -123,10 +172,20 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
               <div className="mt-5 pt-4 border-t border-border">
                 <h3 className="text-sm font-semibold text-foreground mb-2">相關課程連結</h3>
                 {lesson.relatedCourseLinks && lesson.relatedCourseLinks.length > 0 ? (
-                  <ul className="space-y-1">
+                  <ul className="space-y-1.5">
                     {lesson.relatedCourseLinks.map((link, i) => (
-                      <li key={i}>
-                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      <li key={i} className="flex items-center gap-2">
+                        {link.timestamp != null && (
+                          <button
+                            type="button"
+                            onClick={() => playerRef.current?.seekTo(link.timestamp!)}
+                            className="flex-shrink-0 text-xs font-mono px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors cursor-pointer"
+                            title={`跳到 ${formatTimestamp(link.timestamp!)}`}
+                          >
+                            {formatTimestamp(link.timestamp!)}
+                          </button>
+                        )}
+                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm">
                           {link.label || link.url}
                         </a>
                       </li>
@@ -137,25 +196,25 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
                 )}
               </div>
             </section>
-          </div>
 
-          {/* 留言區（左下、影片下方；手機版在影片與 AI 助教之間） */}
-          <div className="flex flex-col min-h-[400px] lg:min-h-0">
-            <h2 className="text-lg font-semibold text-foreground mb-3">留言區</h2>
-            <div className="flex-1 min-h-0">
-              <ChatPanel
-                courseId={courseId}
-                lessonId={lessonId}
-                lessonTitle={lesson.title}
-                currentVideoTime={currentVideoTime}
-                userId={userId}
-                mode="comments"
-              />
+            {/* 留言區（影片＋資訊下方，同一捲動區域） */}
+            <div className="mt-6">
+              <h2 className="text-lg font-semibold text-foreground mb-3">留言區</h2>
+              <div className="min-h-[300px]">
+                <ChatPanel
+                  courseId={courseId}
+                  lessonId={lessonId}
+                  lessonTitle={lesson.title}
+                  currentVideoTime={currentVideoTime}
+                  userId={userId}
+                  mode="comments"
+                />
+              </div>
             </div>
           </div>
 
-          {/* AI 助教（右側，桌面時跨兩行與影片+留言區同高） */}
-          <div className="flex flex-col min-h-[400px] lg:min-h-0 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+          {/* AI 助教（右欄，桌面佔滿高度獨立捲動） */}
+          <div className="flex flex-col min-h-[400px] lg:min-h-0">
             <div className="flex-1 min-h-0">
               <ChatPanel
                 courseId={courseId}

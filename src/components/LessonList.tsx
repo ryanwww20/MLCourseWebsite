@@ -9,6 +9,7 @@ import EditLectureModal from "@/components/EditLectureModal";
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const iconImgClass = "w-5 h-5 object-contain opacity-80 hover:opacity-100 transition-opacity";
+const iconBase = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 interface LessonListProps {
   lessons: Lesson[];
@@ -54,7 +55,7 @@ export default function LessonList({ lessons, courseId, onEditSuccess }: LessonL
                 className="p-1 rounded hover:bg-foreground/10"
                 aria-label="YouTube"
               >
-                <img src="/icons/icon-youtube.png" alt="" className={iconImgClass} width={20} height={20} />
+                <img src={`${iconBase}/icons/icon-youtube.png`} alt="" className={iconImgClass} width={20} height={20} />
               </a>
             )}
             {lesson.pptLink && (
@@ -65,7 +66,7 @@ export default function LessonList({ lessons, courseId, onEditSuccess }: LessonL
                 className="p-1 rounded hover:bg-foreground/10"
                 aria-label="PPT"
               >
-                <img src="/icons/icon-ppt.png" alt="" className={iconImgClass} width={20} height={20} />
+                <img src={`${iconBase}/icons/icon-ppt.png`} alt="" className={iconImgClass} width={20} height={20} />
               </a>
             )}
             {lesson.pdfLink && (
@@ -76,7 +77,7 @@ export default function LessonList({ lessons, courseId, onEditSuccess }: LessonL
                 className="p-1 rounded hover:bg-foreground/10"
                 aria-label="PDF"
               >
-                <img src="/icons/icon-pdf.png" alt="" className={iconImgClass} width={20} height={20} />
+                <img src={`${iconBase}/icons/icon-pdf.png`} alt="" className={iconImgClass} width={20} height={20} />
               </a>
             )}
             {isAdmin && (

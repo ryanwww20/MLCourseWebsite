@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
-import { getHomework, appendHomework, updateHomework } from "@/lib/data";
+import { getHomework, appendHomework, updateHomework, deleteHomework } from "@/lib/data";
 import type { Homework, HomeworkLinkItem } from "@/mock/homework";
 
 function isAdmin(session: { user?: { role?: string } } | null): boolean {
@@ -150,5 +150,27 @@ export async function PUT(req: Request) {
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "更新失敗" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!isAdmin(session)) {
+    return NextResponse.json({ error: "僅限 admin" }, { status: 403 });
+  }
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id?.trim()) {
+      return NextResponse.json({ error: "缺少 id" }, { status: 400 });
+    }
+    const deleted = deleteHomework(id.trim());
+    if (!deleted) {
+      return NextResponse.json({ error: "作業不存在或無法刪除" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "刪除失敗" }, { status: 500 });
   }
 }

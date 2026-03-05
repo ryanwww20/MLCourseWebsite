@@ -1,0 +1,162 @@
+[
+  {
+    "id": "lesson-ml-2026-1",
+    "courseId": "ml-2026",
+    "title": "Week 1 test",
+    "week": 1,
+    "date": "2026-03-06",
+    "videoCount": 1,
+    "materialLinks": [],
+    "relatedCourseLinks": []
+  },
+  {
+    "id": "lesson-GenAI-2025-1",
+    "courseId": "GenAI-2025",
+    "title": "第１講：一堂課搞懂生成式人工智慧的原理",
+    "week": 1,
+    "date": "2025-09-12",
+    "videoCount": 1,
+    "materialLinks": [],
+    "videoLink": "https://www.youtube.com/watch?v=TigfpYPJk1s",
+    "youtubeLink": "https://www.youtube.com/watch?v=TigfpYPJk1s",
+    "pptLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/LLM.pptx",
+    "pdfLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/LLM.pdf",
+    "relatedCourseLinks": []
+  },
+  {
+    "id": "lesson-GenAI-2025-2",
+    "courseId": "GenAI-2025",
+    "title": "第 2 講：上下文工程 (Context Engineering) — AI Agent 背後的關鍵技術",
+    "week": 2,
+    "date": "2025-09-19",
+    "videoCount": 1,
+    "materialLinks": [],
+    "videoLink": "https://www.youtube.com/watch?v=lVdajtNpaGI&t=6339s",
+    "youtubeLink": "https://www.youtube.com/watch?v=lVdajtNpaGI&t=6339s",
+    "pptLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/Agent.pptx",
+    "pdfLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/Agent.pdf",
+    "relatedCourseLinks": [],
+    "extraMaterials": [
+      {
+        "type": "video",
+        "title": "一堂課搞懂 AI Agent 的原理",
+        "url": "https://youtu.be/M2Yg1kwPpts?si=Dw3UvnKQTITxNdci"
+      },
+      {
+        "type": "video",
+        "title": "大型語言模型是如何進行「深度思考」（Reasoning）的？",
+        "url": "https://youtu.be/bJFtcwLSNxI?si=hT-nKkFEEd-zJypH"
+      }
+    ]
+  },
+  {
+    "id": "lesson-GenAI-2025-3",
+    "courseId": "GenAI-2025",
+    "title": "第3講：解剖大型語言模型",
+    "week": 3,
+    "date": "2025-09-26",
+    "videoCount": 1,
+    "materialLinks": [],
+    "videoLink": "https://www.youtube.com/watch?v=8iFvM7WUUs8",
+    "youtubeLink": "https://www.youtube.com/watch?v=8iFvM7WUUs8",
+    "pptLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/LLMunderstand.pptx",
+    "pdfLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/LLMunderstand.pdf",
+    "relatedCourseLinks": [],
+    "extraMaterials": [
+      {
+        "type": "video",
+        "title": "AI 的腦科學 — 語言模型內部運作機制剖析",
+        "url": "https://youtu.be/Xnil63UDW2o?si=HvkbgD0DgpKXxXZu"
+      },
+      {
+        "type": "video",
+        "title": "Transformer 的時代要結束了嗎？介紹 Transformer 的競爭者們",
+        "url": "https://youtu.be/gjsdVi90yQo?si=3fvejM9I2Am9yiyK"
+      }
+    ]
+  },
+  {
+    "id": "lesson-GenAI-2025-4",
+    "courseId": "GenAI-2025",
+    "title": " 第 5 講：一堂課搞懂機器學習與深度學習的基本原理",
+    "week": 4,
+    "date": "2025-10-24",
+    "videoCount": 1,
+    "materialLinks": [],
+    "videoLink": "https://youtu.be/Taj1eHmZyWw?si=dA4Fiol3pEIju7Tq",
+    "youtubeLink": "https://youtu.be/Taj1eHmZyWw?si=dA4Fiol3pEIju7Tq",
+    "pptLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/BasicML.pptx",
+    "pdfLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/BasicML.pdf",
+    "relatedCourseLinks": []
+  },
+  {
+    "id": "lesson-GenAI-2025-5",
+    "courseId": "GenAI-2025",
+    "title": "第 6 講：一堂課搞懂訓練類神經網路的各種訣竅",
+    "week": 5,
+    "date": "2025-10-31",
+    "videoCount": 1,
+    "materialLinks": [],
+    "videoLink": "https://youtu.be/mPWvAN4hzzY?si=tdJgKU4GXcQY_n1T",
+    "youtubeLink": "https://youtu.be/mPWvAN4hzzY?si=tdJgKU4GXcQY_n1T",
+    "pptLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/TrainingTip.pptx",
+    "pdfLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/TrainingTip.pdf",
+    "relatedCourseLinks": []
+  },
+  {
+    "id": "lesson-GenAI-2025-6",
+    "courseId": "GenAI-2025",
+    "title": "第 7 講：大型語言模型的學習歷程",
+    "week": 7,
+    "date": "2025-11-14",
+    "videoCount": 1,
+    "materialLinks": [],
+    "videoLink": "https://youtu.be/YJoegm7kiUM",
+    "youtubeLink": "https://youtu.be/YJoegm7kiUM",
+    "pptLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/LLMtraining.pptx",
+    "pdfLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/LLMtraining.pdf",
+    "relatedCourseLinks": []
+  },
+  {
+    "id": "lesson-GenAI-2025-7",
+    "courseId": "GenAI-2025",
+    "title": "第 8 講：通用模型的終身學習",
+    "week": 8,
+    "date": "2025-11-28",
+    "videoCount": 1,
+    "materialLinks": [],
+    "videoLink": "https://youtu.be/EnWz5XuOnIQ",
+    "youtubeLink": "https://youtu.be/EnWz5XuOnIQ",
+    "pptLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/Post.pptx",
+    "pdfLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/Post.pdf",
+    "relatedCourseLinks": []
+  },
+  {
+    "id": "lesson-GenAI-2025-8",
+    "courseId": "GenAI-2025",
+    "title": "第 9 講：影像和聲音上的生成策略",
+    "week": 9,
+    "date": "2025-12-12",
+    "videoCount": 1,
+    "materialLinks": [],
+    "videoLink": "https://youtu.be/ccqCDD9LqCA",
+    "youtubeLink": "https://youtu.be/ccqCDD9LqCA",
+    "pptLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/Generation.pptx",
+    "pdfLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/Generation.pdf",
+    "relatedCourseLinks": []
+  },
+  {
+    "id": "lesson-GenAI-2025-9",
+    "courseId": "GenAI-2025",
+    "title": "第10講：語音語言模型發展史",
+    "week": 9,
+    "date": "2025-12-19",
+    "videoCount": 1,
+    "materialLinks": [],
+    "videoLink": "https://youtu.be/CbIPjrOj2Tc",
+    "youtubeLink": "https://youtu.be/CbIPjrOj2Tc",
+    "pptLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/SpeechLLM.pptx",
+    "pdfLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/SpeechLLM.pdf",
+    "relatedCourseLinks": []
+  }
+]

@@ -1,8 +1,33 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import type { Course } from "@/mock/courses";
-import type { Lesson, RelatedCourseLink } from "@/mock/lessons";
+import type { Lesson, RelatedCourseLink, ExtraMaterial } from "@/mock/lessons";
+
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+function secondsToMMSS(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function mmssToSeconds(str: string): number | undefined {
+  const trimmed = str.trim();
+  if (!trimmed) return undefined;
+  const parts = trimmed.split(":");
+  if (parts.length === 2) {
+    const m = parseInt(parts[0], 10);
+    const s = parseInt(parts[1], 10);
+    if (!isNaN(m) && !isNaN(s)) return m * 60 + s;
+  }
+  if (parts.length === 1) {
+    const n = parseInt(parts[0], 10);
+    if (!isNaN(n)) return n;
+  }
+  return undefined;
+}
 
 interface EditLectureModalProps {
   open: boolean;
@@ -27,15 +52,19 @@ function lessonToForm(lesson: Lesson): Record<string, string> {
 }
 
 export default function EditLectureModal({ open, onClose, onSuccess, lesson }: EditLectureModalProps) {
+  const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [form, setForm] = useState<Record<string, string>>({});
   const [relatedCourseLinks, setRelatedCourseLinks] = useState<RelatedCourseLink[]>([]);
+  const [timestampInputs, setTimestampInputs] = useState<string[]>([]);
+  const [extraMaterials, setExtraMaterials] = useState<ExtraMaterial[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (open) {
-      fetch("/api/courses")
+      fetch(`${BASE_PATH}/api/courses`)
         .then((r) => r.json())
         .then(setCourses)
         .catch(() => setCourses([]));
@@ -46,7 +75,10 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
   useEffect(() => {
     if (open && lesson) {
       setForm(lessonToForm(lesson));
-      setRelatedCourseLinks(Array.isArray(lesson.relatedCourseLinks) ? [...lesson.relatedCourseLinks] : []);
+      const links = Array.isArray(lesson.relatedCourseLinks) ? [...lesson.relatedCourseLinks] : [];
+      setRelatedCourseLinks(links);
+      setTimestampInputs(links.map((l) => (l.timestamp != null ? secondsToMMSS(l.timestamp) : "")));
+      setExtraMaterials(Array.isArray(lesson.extraMaterials) ? [...lesson.extraMaterials] : []);
     }
   }, [open, lesson]);
 
@@ -60,7 +92,7 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
         .split(/[\n,]/)
         .map((s) => s.trim())
         .filter(Boolean);
-      const res = await fetch("/api/admin/lessons", {
+      const res = await fetch(`${BASE_PATH}/api/admin/lessons`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -75,7 +107,14 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
           youtubeLink: form.youtubeLink || undefined,
           pptLink: form.pptLink || undefined,
           pdfLink: form.pdfLink || undefined,
-          relatedCourseLinks: relatedCourseLinks.filter((l) => l.url.trim()),
+          relatedCourseLinks: relatedCourseLinks
+            .filter((l) => l.url.trim())
+            .map((l) => ({
+              label: l.label,
+              url: l.url,
+              ...(l.timestamp != null && !isNaN(l.timestamp) ? { timestamp: l.timestamp } : {}),
+            })),
+          extraMaterials: extraMaterials.filter((m) => m.url.trim()),
         }),
       });
       const data = await res.json();
@@ -84,6 +123,25 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
       onClose();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "更新失敗");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!lesson) return;
+    setShowDeleteConfirm(false);
+    setSubmitError("");
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE_PATH}/api/admin/lessons?id=${encodeURIComponent(lesson.id)}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "刪除失敗");
+      onClose();
+      onSuccess?.();
+      router.push(`/courses/${lesson.courseId}`);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "刪除失敗");
     } finally {
       setLoading(false);
     }
@@ -151,34 +209,53 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">相關課程連結</label>
             <p className="text-xs text-muted-foreground mb-2">顯示於本講頁「相關課程連結」區塊，可新增多筆（標題 + 連結）</p>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {relatedCourseLinks.map((link, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <input
-                    value={link.label}
-                    onChange={(e) => {
-                      const next = [...relatedCourseLinks];
-                      next[i] = { ...next[i], label: e.target.value };
-                      setRelatedCourseLinks(next);
-                    }}
-                    placeholder="標題"
-                    className="flex-1 min-w-0 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
-                  />
-                  <input
-                    value={link.url}
-                    onChange={(e) => {
-                      const next = [...relatedCourseLinks];
-                      next[i] = { ...next[i], url: e.target.value };
-                      setRelatedCourseLinks(next);
-                    }}
-                    placeholder="https://..."
-                    type="url"
-                    className="flex-1 min-w-0 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
-                  />
+                <div key={i} className="flex gap-2 items-start">
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <input
+                      value={link.label}
+                      onChange={(e) => {
+                        const next = [...relatedCourseLinks];
+                        next[i] = { ...next[i], label: e.target.value };
+                        setRelatedCourseLinks(next);
+                      }}
+                      placeholder="標題"
+                      className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        value={link.url}
+                        onChange={(e) => {
+                          const next = [...relatedCourseLinks];
+                          next[i] = { ...next[i], url: e.target.value };
+                          setRelatedCourseLinks(next);
+                        }}
+                        placeholder="https://..."
+                        type="url"
+                        className="flex-1 min-w-0 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                      />
+                      <input
+                        value={timestampInputs[i] ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setTimestampInputs((prev) => { const n = [...prev]; n[i] = val; return n; });
+                          const next = [...relatedCourseLinks];
+                          next[i] = { ...next[i], timestamp: mmssToSeconds(val) };
+                          setRelatedCourseLinks(next);
+                        }}
+                        placeholder="分:秒（如 2:30）"
+                        className="w-32 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                      />
+                    </div>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setRelatedCourseLinks((prev) => prev.filter((_, j) => j !== i))}
-                    className="p-2 text-muted-foreground hover:text-foreground rounded"
+                    onClick={() => {
+                      setRelatedCourseLinks((prev) => prev.filter((_, j) => j !== i));
+                      setTimestampInputs((prev) => prev.filter((_, j) => j !== i));
+                    }}
+                    className="p-2 text-muted-foreground hover:text-foreground rounded mt-1"
                     aria-label="刪除此筆"
                   >
                     ×
@@ -187,7 +264,71 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
               ))}
               <button
                 type="button"
-                onClick={() => setRelatedCourseLinks((prev) => [...prev, { label: "", url: "" }])}
+                onClick={() => {
+                  setRelatedCourseLinks((prev) => [...prev, { label: "", url: "" }]);
+                  setTimestampInputs((prev) => [...prev, ""]);
+                }}
+                className="text-sm px-3 py-1.5 border border-border rounded-lg text-foreground hover:bg-foreground/5"
+              >
+                ＋ 新增一筆
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Extra Material</label>
+            <p className="text-xs text-muted-foreground mb-2">可新增多筆額外教材，選擇類型後填入標題與連結</p>
+            <div className="space-y-3">
+              {extraMaterials.map((mat, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <select
+                    value={mat.type}
+                    onChange={(e) => {
+                      const next = [...extraMaterials];
+                      next[i] = { ...next[i], type: e.target.value as "video" | "slide" };
+                      setExtraMaterials(next);
+                    }}
+                    className="px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm w-24 flex-shrink-0"
+                  >
+                    <option value="video">Video</option>
+                    <option value="slide">Slide</option>
+                  </select>
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <input
+                      value={mat.title}
+                      onChange={(e) => {
+                        const next = [...extraMaterials];
+                        next[i] = { ...next[i], title: e.target.value };
+                        setExtraMaterials(next);
+                      }}
+                      placeholder="標題（顯示名稱）"
+                      type="text"
+                      className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                    />
+                    <input
+                      value={mat.url}
+                      onChange={(e) => {
+                        const next = [...extraMaterials];
+                        next[i] = { ...next[i], url: e.target.value };
+                        setExtraMaterials(next);
+                      }}
+                      placeholder="https://..."
+                      type="url"
+                      className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setExtraMaterials((prev) => prev.filter((_, j) => j !== i))}
+                    className="p-2 text-muted-foreground hover:text-foreground rounded mt-1"
+                    aria-label="刪除此筆"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setExtraMaterials((prev) => [...prev, { type: "video", title: "", url: "" }])}
                 className="text-sm px-3 py-1.5 border border-border rounded-lg text-foreground hover:bg-foreground/5"
               >
                 ＋ 新增一筆
@@ -195,11 +336,42 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
             </div>
           </div>
           {submitError && <p className="text-sm text-red-600">{submitError}</p>}
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-foreground">取消</button>
-            <button type="submit" disabled={loading} className="px-4 py-2 bg-foreground text-background rounded-lg disabled:opacity-50">{loading ? "儲存中…" : "儲存"}</button>
+          <div className="flex gap-2 pt-2 justify-between">
+            <div className="flex gap-2">
+              <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-foreground">取消</button>
+              <button type="submit" disabled={loading} className="px-4 py-2 bg-foreground text-background rounded-lg disabled:opacity-50">{loading ? "儲存中…" : "儲存"}</button>
+            </div>
+            <button type="button" onClick={() => setShowDeleteConfirm(true)} disabled={loading} className="px-4 py-2 border border-red-500 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50">刪除</button>
           </div>
         </form>
+
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40">
+            <div className="bg-background border border-border rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+              <h3 className="text-lg font-semibold text-foreground mb-2">確認刪除</h3>
+              <p className="text-sm text-muted-foreground mb-5">
+                確定要刪除章節「<span className="font-medium text-foreground">{lesson?.title}</span>」？
+                此操作<span className="text-red-600 font-medium">無法復原</span>。
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 border border-border rounded-lg text-foreground text-sm hover:bg-foreground/5"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                >
+                  確認刪除
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

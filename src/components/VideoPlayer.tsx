@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useImperativeHandle, forwardRef } from "react";
 
 /** YouTube 影片 id 為 11 字元（英數字與 -_），非此格式會讓 iframe 無法播放，視為無效 */
 function isValidYoutubeVideoId(id: string): boolean {
@@ -40,6 +40,11 @@ const YOUTUBE_IFRAME_ALLOW =
 
 interface YTPlayer {
   getCurrentTime?: () => number;
+  seekTo?: (seconds: number, allowSeekAhead: boolean) => void;
+}
+
+export interface VideoPlayerHandle {
+  seekTo: (seconds: number) => void;
 }
 
 declare global {
@@ -60,14 +65,25 @@ interface VideoPlayerProps {
   onTimeUpdate?: (currentTime: number) => void;
 }
 
-export default function VideoPlayer({ src, onTimeUpdate }: VideoPlayerProps) {
+const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer({ src, onTimeUpdate }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const youtubeContainerRef = useRef<HTMLDivElement>(null);
+  const ytPlayerRef = useRef<YTPlayer | null>(null);
   const [ytReady, setYtReady] = useState(false);
   /** API 載入或建立 player 失敗時（如 web-share 錯誤）改回純 iframe，不取時間 */
   const [useFallbackIframe, setUseFallbackIframe] = useState(false);
 
   const youtubeId = src ? getYoutubeVideoId(src) : null;
+
+  useImperativeHandle(ref, () => ({
+    seekTo(seconds: number) {
+      if (ytPlayerRef.current?.seekTo) {
+        ytPlayerRef.current.seekTo(seconds, true);
+      } else if (videoRef.current) {
+        videoRef.current.currentTime = seconds;
+      }
+    },
+  }), []);
   const isYoutubeUrl = (url: string) => /youtube\.com|youtu\.be/.test(url);
   const directUrl = src && !youtubeId && !isYoutubeUrl(src) ? src : null;
   const fallbackUrl = !youtubeId && !directUrl ? DEFAULT_SAMPLE_VIDEO : null;
@@ -133,6 +149,7 @@ export default function VideoPlayer({ src, onTimeUpdate }: VideoPlayerProps) {
         width: "100%",
         height: "100%",
       });
+      ytPlayerRef.current = player;
     } catch {
       setUseFallbackIframe(true);
       return;
@@ -151,6 +168,7 @@ export default function VideoPlayer({ src, onTimeUpdate }: VideoPlayerProps) {
 
     return () => {
       clearInterval(interval);
+      ytPlayerRef.current = null;
     };
   }, [youtubeId, ytReady, useFallbackIframe, onTimeUpdate]);
 
@@ -204,5 +222,7 @@ export default function VideoPlayer({ src, onTimeUpdate }: VideoPlayerProps) {
       </video>
     </div>
   );
-}
+});
+
+export default VideoPlayer;
 

@@ -1,4 +1,5 @@
 import Navbar from "@/components/Navbar";
+import CourseDetailHeader from "@/components/CourseDetailHeader";
 import CourseDetailTabs from "@/components/CourseDetailTabs";
 import { getCourses, getLessons, getHomework } from "@/lib/data";
 import { notFound } from "next/navigation";
@@ -33,6 +34,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
         {/* 主內容區：用 negative margin 往上拉，浮在兩層交界 */}
         <div className="relative -mt-32 mx-auto max-w-6xl px-4 sm:px-6 pb-12">
           <div className="lg:col-span-2">
+            <CourseDetailHeader courseId={course.id} courseName={course.name} />
             <CourseDetailTabs courseId={course.id} lessons={courseLessons} homework={courseHomework} />
           </div>
         </div>

@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
-import { appendCourse, getCourses, getPersistedCourses } from "@/lib/data";
+import { appendCourse, getCourses, getPersistedCourses, deleteCourse } from "@/lib/data";
 import type { Course } from "@/mock/courses";
 
 function isAdmin(session: { user?: { role?: string } } | null): boolean {
@@ -45,5 +45,27 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "新增失敗" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!isAdmin(session)) {
+    return NextResponse.json({ error: "僅限 admin" }, { status: 403 });
+  }
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id?.trim()) {
+      return NextResponse.json({ error: "缺少 id" }, { status: 400 });
+    }
+    const deleted = deleteCourse(id.trim());
+    if (!deleted) {
+      return NextResponse.json({ error: "課程不存在或無法刪除" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "刪除失敗" }, { status: 500 });
   }
 }

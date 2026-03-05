@@ -2,6 +2,15 @@
 export interface RelatedCourseLink {
   label: string;
   url: string;
+  /** 影片時間戳（秒），點擊可跳到 YouTube 對應位置 */
+  timestamp?: number;
+}
+
+/** 額外教材（video 或 slide，admin 可編輯） */
+export interface ExtraMaterial {
+  type: "video" | "slide";
+  title: string;
+  url: string;
 }
 
 export interface Lesson {
@@ -22,92 +31,7 @@ export interface Lesson {
   pdfLink?: string;
   /** 相關課程連結（本講頁「相關課程連結」區塊，admin 可編輯） */
   relatedCourseLinks?: RelatedCourseLink[];
+  /** 額外教材（本講頁「Extra Material」區塊，admin 可編輯） */
+  extraMaterials?: ExtraMaterial[];
 }
-
-export const lessons: Lesson[] = [
-  {
-    id: "lesson-1",
-    courseId: "ml-2026",
-    title: "機器學習導論",
-    week: 1,
-    date: "2026-02-15",
-    videoCount: 2,
-    materialLinks: ["https://example.com/slides/week1.pdf", "https://example.com/homework/week1.pdf"],
-    youtubeLink: "https://youtu.be/QLiKmca4kzI?si=p695HEwPDBgeV-3P",
-    pptLink: "https://example.com/slides/week1.pptx",
-    pdfLink: "https://example.com/slides/week1.pdf",
-  },
-  {
-    id: "lesson-2",
-    courseId: "ml-2026",
-    title: "線性回歸與梯度下降",
-    week: 2,
-    date: "2026-02-22",
-    videoCount: 3,
-    materialLinks: ["https://example.com/slides/week2.pdf"],
-    youtubeLink: "https://www.youtube.com/watch?v=example2",
-    pptLink: "https://example.com/slides/week2.pptx",
-    pdfLink: "https://example.com/slides/week2.pdf",
-  },
-  {
-    id: "lesson-3",
-    courseId: "ml-2026",
-    title: "邏輯回歸與分類",
-    week: 3,
-    date: "2026-03-01",
-    videoCount: 2,
-    materialLinks: ["https://example.com/slides/week3.pdf", "https://example.com/code/week3.zip"],
-    youtubeLink: "https://www.youtube.com/watch?v=example3",
-    pptLink: "https://example.com/slides/week3.pptx",
-    pdfLink: "https://example.com/slides/week3.pdf",
-  },
-  {
-    id: "lesson-4",
-    courseId: "ml-2026",
-    title: "神經網路基礎",
-    week: 4,
-    date: "2026-03-08",
-    videoCount: 4,
-    materialLinks: ["https://example.com/slides/week4.pdf"],
-    youtubeLink: "https://www.youtube.com/watch?v=example4",
-    pptLink: "https://example.com/slides/week4.pptx",
-    pdfLink: "https://example.com/slides/week4.pdf",
-  },
-  {
-    id: "lesson-5",
-    courseId: "ml-2026",
-    title: "深度學習入門",
-    week: 5,
-    date: "2026-03-15",
-    videoCount: 3,
-    materialLinks: ["https://example.com/slides/week5.pdf", "https://example.com/notebook/week5.ipynb"],
-    youtubeLink: "https://www.youtube.com/watch?v=example5",
-    pptLink: "https://example.com/slides/week5.pptx",
-    pdfLink: "https://example.com/slides/week5.pdf",
-  },
-  {
-    id: "lesson-1-dl",
-    courseId: "dl-2026",
-    title: "深度學習基礎",
-    week: 6,
-    date: "2026-02-16",
-    videoCount: 2,
-    materialLinks: ["https://example.com/slides/dl-week1.pdf"],
-    youtubeLink: "https://www.youtube.com/watch?v=example-dl1",
-    pptLink: "https://example.com/slides/dl-week1.pptx",
-    pdfLink: "https://example.com/slides/dl-week1.pdf",
-  },
-  {
-    id: "lesson-2-dl",
-    courseId: "dl-2026",
-    title: "卷積神經網路",
-    week: 7,
-    date: "2026-02-23",
-    videoCount: 3,
-    materialLinks: ["https://example.com/slides/dl-week2.pdf"],
-    youtubeLink: "https://www.youtube.com/watch?v=example-dl2",
-    pptLink: "https://example.com/slides/dl-week2.pptx",
-    pdfLink: "https://example.com/slides/dl-week2.pdf",
-  },
-];
 
