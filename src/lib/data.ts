@@ -1,8 +1,5 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
-import { courses as mockCourses } from "@/mock/courses";
-import { lessons as mockLessons } from "@/mock/lessons";
-import { homework as mockHomework } from "@/mock/homework";
 import type { Course } from "@/mock/courses";
 import type { Lesson } from "@/mock/lessons";
 import type { Homework } from "@/mock/homework";
@@ -14,17 +11,7 @@ function ensureDataDir() {
 }
 
 export function getCourses(): Course[] {
-  const base = [...mockCourses];
-  const path = join(DATA_DIR, "courses.json");
-  if (!existsSync(path)) return base;
-  try {
-    const raw = readFileSync(path, "utf8").trim();
-    if (!raw) return base;
-    const extra = JSON.parse(raw) as Course[];
-    return Array.isArray(extra) ? [...base, ...extra] : base;
-  } catch {
-    return base;
-  }
+  return readJsonArray<Course>(join(DATA_DIR, "courses.json"));
 }
 
 /** 僅回傳 data/courses.json 的內容（供產生新 id 或判斷是否可編輯） */
@@ -40,30 +27,11 @@ export function appendCourse(course: Course): void {
 }
 
 export function getLessons(): Lesson[] {
-  const base = [...mockLessons];
-  const path = join(DATA_DIR, "lessons.json");
-  if (!existsSync(path)) return base;
-  try {
-    const raw = readFileSync(path, "utf8").trim();
-    if (!raw) return base;
-    const extra = JSON.parse(raw) as Lesson[];
-    return Array.isArray(extra) ? [...base, ...extra] : base;
-  } catch {
-    return base;
-  }
+  return readJsonArray<Lesson>(join(DATA_DIR, "lessons.json"));
 }
 
 export function getHomework(): Homework[] {
-  const base = [...mockHomework];
-  const path = join(DATA_DIR, "homework.json");
-  if (!existsSync(path)) return base;
-  try {
-    const raw = readFileSync(path, "utf8");
-    const extra = JSON.parse(raw) as Homework[];
-    return Array.isArray(extra) ? [...base, ...extra] : base;
-  } catch {
-    return base;
-  }
+  return readJsonArray<Homework>(join(DATA_DIR, "homework.json"));
 }
 
 /** 僅回傳 data/homework.json 的內容（供判斷是否可編輯） */
