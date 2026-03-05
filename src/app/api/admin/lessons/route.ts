@@ -24,8 +24,9 @@ function parseExtraMaterials(v: unknown): ExtraMaterial[] {
     .map((item) => {
       if (item && typeof item === "object" && "type" in item && "url" in item) {
         const type = String((item as { type: unknown }).type).trim();
+        const title = "title" in item ? String((item as { title: unknown }).title).trim() : "";
         const url = String((item as { url: unknown }).url).trim();
-        if ((type === "video" || type === "slide") && url) return { type, url };
+        if ((type === "video" || type === "slide") && url) return { type, title, url };
       }
       return null;
     })

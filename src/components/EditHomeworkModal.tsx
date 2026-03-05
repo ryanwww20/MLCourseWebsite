@@ -56,6 +56,7 @@ export default function EditHomeworkModal({ open, onClose, onSuccess, homework }
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [form, setForm] = useState<Record<string, string>>({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -112,7 +113,7 @@ export default function EditHomeworkModal({ open, onClose, onSuccess, homework }
 
   const handleDelete = async () => {
     if (!homework) return;
-    if (!confirm(`確定要刪除作業「${homework.topic}」？此操作無法復原。`)) return;
+    setShowDeleteConfirm(false);
     setSubmitError("");
     setLoading(true);
     try {
@@ -216,9 +217,37 @@ export default function EditHomeworkModal({ open, onClose, onSuccess, homework }
               <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-foreground">取消</button>
               <button type="submit" disabled={loading} className="px-4 py-2 bg-foreground text-background rounded-lg disabled:opacity-50">{loading ? "儲存中…" : "儲存"}</button>
             </div>
-            <button type="button" onClick={handleDelete} disabled={loading} className="px-4 py-2 border border-red-500 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50">刪除</button>
+            <button type="button" onClick={() => setShowDeleteConfirm(true)} disabled={loading} className="px-4 py-2 border border-red-500 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50">刪除</button>
           </div>
         </form>
+
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40">
+            <div className="bg-background border border-border rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+              <h3 className="text-lg font-semibold text-foreground mb-2">確認刪除</h3>
+              <p className="text-sm text-muted-foreground mb-5">
+                確定要刪除作業「<span className="font-medium text-foreground">{homework?.topic}</span>」？
+                此操作<span className="text-red-600 font-medium">無法復原</span>。
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 border border-border rounded-lg text-foreground text-sm hover:bg-foreground/5"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                >
+                  確認刪除
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

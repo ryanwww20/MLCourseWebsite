@@ -7,6 +7,7 @@ export interface RelatedCourseLink {
 /** 額外教材（video 或 slide，admin 可編輯） */
 export interface ExtraMaterial {
   type: "video" | "slide";
+  title: string;
   url: string;
 }
 

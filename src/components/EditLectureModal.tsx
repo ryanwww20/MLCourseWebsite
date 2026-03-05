@@ -37,6 +37,7 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
   const [form, setForm] = useState<Record<string, string>>({});
   const [relatedCourseLinks, setRelatedCourseLinks] = useState<RelatedCourseLink[]>([]);
   const [extraMaterials, setExtraMaterials] = useState<ExtraMaterial[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -98,7 +99,7 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
 
   const handleDelete = async () => {
     if (!lesson) return;
-    if (!confirm(`確定要刪除「${lesson.title}」？此操作無法復原。`)) return;
+    setShowDeleteConfirm(false);
     setSubmitError("");
     setLoading(true);
     try {
@@ -222,10 +223,10 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Extra Material</label>
-            <p className="text-xs text-muted-foreground mb-2">可新增多筆額外教材，選擇類型後填入連結</p>
-            <div className="space-y-2">
+            <p className="text-xs text-muted-foreground mb-2">可新增多筆額外教材，選擇類型後填入標題與連結</p>
+            <div className="space-y-3">
               {extraMaterials.map((mat, i) => (
-                <div key={i} className="flex gap-2 items-center">
+                <div key={i} className="flex gap-2 items-start">
                   <select
                     value={mat.type}
                     onChange={(e) => {
@@ -238,21 +239,34 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
                     <option value="video">Video</option>
                     <option value="slide">Slide</option>
                   </select>
-                  <input
-                    value={mat.url}
-                    onChange={(e) => {
-                      const next = [...extraMaterials];
-                      next[i] = { ...next[i], url: e.target.value };
-                      setExtraMaterials(next);
-                    }}
-                    placeholder="https://..."
-                    type="url"
-                    className="flex-1 min-w-0 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
-                  />
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <input
+                      value={mat.title}
+                      onChange={(e) => {
+                        const next = [...extraMaterials];
+                        next[i] = { ...next[i], title: e.target.value };
+                        setExtraMaterials(next);
+                      }}
+                      placeholder="標題（顯示名稱）"
+                      type="text"
+                      className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                    />
+                    <input
+                      value={mat.url}
+                      onChange={(e) => {
+                        const next = [...extraMaterials];
+                        next[i] = { ...next[i], url: e.target.value };
+                        setExtraMaterials(next);
+                      }}
+                      placeholder="https://..."
+                      type="url"
+                      className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => setExtraMaterials((prev) => prev.filter((_, j) => j !== i))}
-                    className="p-2 text-muted-foreground hover:text-foreground rounded"
+                    className="p-2 text-muted-foreground hover:text-foreground rounded mt-1"
                     aria-label="刪除此筆"
                   >
                     ×
@@ -261,7 +275,7 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
               ))}
               <button
                 type="button"
-                onClick={() => setExtraMaterials((prev) => [...prev, { type: "video", url: "" }])}
+                onClick={() => setExtraMaterials((prev) => [...prev, { type: "video", title: "", url: "" }])}
                 className="text-sm px-3 py-1.5 border border-border rounded-lg text-foreground hover:bg-foreground/5"
               >
                 ＋ 新增一筆
@@ -274,9 +288,37 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
               <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-foreground">取消</button>
               <button type="submit" disabled={loading} className="px-4 py-2 bg-foreground text-background rounded-lg disabled:opacity-50">{loading ? "儲存中…" : "儲存"}</button>
             </div>
-            <button type="button" onClick={handleDelete} disabled={loading} className="px-4 py-2 border border-red-500 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50">刪除</button>
+            <button type="button" onClick={() => setShowDeleteConfirm(true)} disabled={loading} className="px-4 py-2 border border-red-500 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50">刪除</button>
           </div>
         </form>
+
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40">
+            <div className="bg-background border border-border rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+              <h3 className="text-lg font-semibold text-foreground mb-2">確認刪除</h3>
+              <p className="text-sm text-muted-foreground mb-5">
+                確定要刪除章節「<span className="font-medium text-foreground">{lesson?.title}</span>」？
+                此操作<span className="text-red-600 font-medium">無法復原</span>。
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 border border-border rounded-lg text-foreground text-sm hover:bg-foreground/5"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
+                >
+                  確認刪除
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

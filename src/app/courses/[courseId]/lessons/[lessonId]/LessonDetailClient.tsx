@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import VideoPlayer from "@/components/VideoPlayer";
 import ChatPanel from "@/components/ChatPanel";
@@ -42,14 +43,25 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
   const userId = session?.user?.id ?? session?.user?.email ?? null;
   const iconBase = useIconBase();
 
+  const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+  const { prevLesson, nextLesson } = useMemo(() => {
+    const all = [lesson, ...relatedLessons].sort((a, b) => a.week - b.week || a.id.localeCompare(b.id));
+    const idx = all.findIndex((l) => l.id === lesson.id);
+    return {
+      prevLesson: idx > 0 ? all[idx - 1] : null,
+      nextLesson: idx < all.length - 1 ? all[idx + 1] : null,
+    };
+  }, [lesson, relatedLessons]);
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-background flex flex-col">
       <Navbar />
-      <main className="mx-auto max-w-[1920px] px-4 py-8 sm:px-6 lg:px-8">
+      <main className="flex-1 min-h-0 mx-auto w-full max-w-[1920px] px-4 py-4 sm:px-6 lg:px-8 lg:pb-4">
         {/* 桌面：左欄 影片+留言區，右欄 AI 助教；手機：影片 → 留言區 → AI 助教 */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(320px,400px)] lg:grid-rows-[auto_1fr] gap-6 lg:min-h-[calc(100vh-8rem)]">
-          {/* 影片區（左上） */}
-          <div className="lg:pr-2">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(320px,400px)] gap-6 h-full">
+          {/* 影片＋資訊＋留言（左欄，桌面可獨立捲動） */}
+          <div className="lg:overflow-y-auto lg:pr-2 lg:min-h-0">
             <div className="flex items-center justify-between gap-4 mb-4">
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold text-foreground">課程影片</h1>
@@ -151,7 +163,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
                           rel="noopener noreferrer"
                           className="text-primary hover:underline text-sm truncate"
                         >
-                          {mat.url}
+                          {mat.title || mat.url}
                         </a>
                       </li>
                     ))}
@@ -161,7 +173,47 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
 
               {/* 相關課程連結（admin 可編輯，無資料時留白） */}
               <div className="mt-5 pt-4 border-t border-border">
-                <h3 className="text-sm font-semibold text-foreground mb-2">相關課程連結</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-foreground">相關課程連結</h3>
+                  <div className="flex items-center gap-2">
+                    {prevLesson ? (
+                      <Link
+                        href={`${BASE_PATH}/courses/${courseId}/lessons/${prevLesson.id}`}
+                        className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border border-border text-foreground hover:bg-foreground/10 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                        </svg>
+                        上一堂
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border border-border/50 text-muted-foreground/40 cursor-not-allowed select-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                        </svg>
+                        上一堂
+                      </span>
+                    )}
+                    {nextLesson ? (
+                      <Link
+                        href={`${BASE_PATH}/courses/${courseId}/lessons/${nextLesson.id}`}
+                        className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border border-border text-foreground hover:bg-foreground/10 transition-colors"
+                      >
+                        下一堂
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                        </svg>
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border border-border/50 text-muted-foreground/40 cursor-not-allowed select-none">
+                        下一堂
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                        </svg>
+                      </span>
+                    )}
+                  </div>
+                </div>
                 {lesson.relatedCourseLinks && lesson.relatedCourseLinks.length > 0 ? (
                   <ul className="space-y-1">
                     {lesson.relatedCourseLinks.map((link, i) => (
@@ -177,25 +229,25 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
                 )}
               </div>
             </section>
-          </div>
 
-          {/* 留言區（左下、影片下方；手機版在影片與 AI 助教之間） */}
-          <div className="flex flex-col min-h-[400px] lg:min-h-0">
-            <h2 className="text-lg font-semibold text-foreground mb-3">留言區</h2>
-            <div className="flex-1 min-h-0">
-              <ChatPanel
-                courseId={courseId}
-                lessonId={lessonId}
-                lessonTitle={lesson.title}
-                currentVideoTime={currentVideoTime}
-                userId={userId}
-                mode="comments"
-              />
+            {/* 留言區（影片＋資訊下方，同一捲動區域） */}
+            <div className="mt-6">
+              <h2 className="text-lg font-semibold text-foreground mb-3">留言區</h2>
+              <div className="min-h-[300px]">
+                <ChatPanel
+                  courseId={courseId}
+                  lessonId={lessonId}
+                  lessonTitle={lesson.title}
+                  currentVideoTime={currentVideoTime}
+                  userId={userId}
+                  mode="comments"
+                />
+              </div>
             </div>
           </div>
 
-          {/* AI 助教（右側，桌面時跨兩行與影片+留言區同高） */}
-          <div className="flex flex-col min-h-[400px] lg:min-h-0 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+          {/* AI 助教（右欄，桌面佔滿高度獨立捲動） */}
+          <div className="flex flex-col min-h-[400px] lg:min-h-0">
             <div className="flex-1 min-h-0">
               <ChatPanel
                 courseId={courseId}

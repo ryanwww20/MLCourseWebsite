@@ -58,6 +58,59 @@ const DEFAULT_WELCOME: Message = {
   timestamp: "",
 };
 
+interface ParsedContent {
+  keywords: string | null;
+  body: string;
+  source: string | null;
+}
+
+function parseAssistantContent(raw: string): ParsedContent {
+  let text = raw;
+  let keywords: string | null = null;
+  let source: string | null = null;
+
+  // Keywords: fuzzy match "關鍵字" (or close variants) near the start.
+  // Handles bold/italic, various colons, with/without --- separator.
+  const kwRe = /^\s*(?:[*#_]{0,3})\s*關\s*鍵\s*字\s*(?:[*#_]{0,3})\s*[：:]\s*(?:[*_]{0,2})\s*(.+?)(?:\n-{2,}\s*\n|\n\n|\n(?=[^\s]))/s;
+  const kwMatch = text.match(kwRe);
+  if (kwMatch) {
+    keywords = kwMatch[1].trim();
+    text = text.slice(kwMatch[0].length);
+  }
+
+  // Source: fuzzy match "資料來源" (covers "資料來源與時間戳", "參考資料", etc.)
+  // near the end. Handles bold/italic, various separators before it.
+  const srcRe = /(?:\n-{2,}\s*\n|\n\n|\n)\s*(?:[*#_]{0,3})\s*(?:資料來源|參考資料|引用來源)[^\n：:]*\s*(?:[*#_]{0,3})\s*[：:]\s*(?:[*_]{0,2})\s*\n?([\s\S]+)$/;
+  const srcMatch = text.match(srcRe);
+  if (srcMatch) {
+    source = srcMatch[1].trim();
+    text = text.slice(0, srcMatch.index!).trimEnd();
+  }
+
+  return { keywords, body: text.trim(), source };
+}
+
+function CollapsibleSection({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-6 border border-border rounded-lg overflow-hidden text-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full px-3 py-1.5 text-left text-muted hover:text-foreground hover:bg-foreground/5 flex items-center justify-between"
+      >
+        <span>{label}</span>
+        <span className="text-xs">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="px-3 pb-2 pt-0 text-xs text-muted-foreground whitespace-pre-wrap">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** 每個 tab 的對話用 courseId:lessonId:tabId 儲存 */
 function getChatStorageKey(courseId: string, lessonId: string, tabId: string): string {
   return `${CHAT_STORAGE_PREFIX}${courseId}:${lessonId}:${tabId}`;
@@ -879,49 +932,66 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
             className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
           >
             {message.role === "assistant" ? (
-              <div className="max-w-[80%]">
-                <MarkdownErrorBoundary>
-                  <div className="prose prose-sm max-w-none">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkMath]}
-                      rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
-                    >
-                      {message.content ?? ""}
-                    </ReactMarkdown>
-                  </div>
-                </MarkdownErrorBoundary>
-                {message.videoTimestamp && (
-                  <div className="mt-2">
-                    <span className="text-xs px-1.5 py-0.5 bg-foreground/10 text-muted rounded">
-                      {message.videoTimestamp}
-                    </span>
+              (() => {
+                const parsed = parseAssistantContent(message.content ?? "");
+                return (
+                  <div className="max-w-[80%]">
+                {parsed.keywords && (
+                  <div className="mb-6">
+                  <CollapsibleSection label="關鍵字">
+                    {parsed.keywords}
+                  </CollapsibleSection>
                   </div>
                 )}
-                {lastMessageIdWithSteps === message.id && lastSteps.length > 0 && (
-                  <div className="mt-3 border border-border rounded-lg overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setStepsOpen((o) => !o)}
-                      className="w-full px-3 py-2 text-left text-sm text-muted hover:text-foreground hover:bg-foreground/5 flex items-center justify-between"
-                    >
-                      <span>{lastSteps.length} steps（thinking & tool use）</span>
-                      <span className="text-xs">{stepsOpen ? "▲" : "▼"}</span>
-                    </button>
-                    {stepsOpen && (
-                      <div className="px-3 pb-3 pt-0 space-y-2 max-h-48 overflow-y-auto text-xs font-mono bg-foreground/5">
-                        {lastSteps.map((step, i) => (
-                          <div key={i} className="rounded p-2 bg-background border border-border">
-                            <span className="font-semibold text-foreground">{step.type}</span>
-                            {step.function != null && <span className="ml-1 text-muted">→ {step.function}</span>}
-                            {step.content != null && <pre className="mt-1 whitespace-pre-wrap break-words text-muted">{step.content}</pre>}
-                            {step.arguments != null && <pre className="mt-1 whitespace-pre-wrap break-words text-muted">{JSON.stringify(step.arguments)}</pre>}
+                    <MarkdownErrorBoundary>
+                      <div className="prose prose-sm max-w-none">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkMath]}
+                          rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
+                        >
+                          {parsed.body}
+                        </ReactMarkdown>
+                      </div>
+                    </MarkdownErrorBoundary>
+                {parsed.source && (
+                  <CollapsibleSection label="資料來源與時間戳">
+                    {parsed.source}
+                  </CollapsibleSection>
+                )}
+                    {message.videoTimestamp && (
+                      <div className="mt-2">
+                        <span className="text-xs px-1.5 py-0.5 bg-foreground/10 text-muted rounded">
+                          {message.videoTimestamp}
+                        </span>
+                      </div>
+                    )}
+                    {lastMessageIdWithSteps === message.id && lastSteps.length > 0 && (
+                      <div className="mt-3 border border-border rounded-lg overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setStepsOpen((o) => !o)}
+                          className="w-full px-3 py-2 text-left text-sm text-muted hover:text-foreground hover:bg-foreground/5 flex items-center justify-between"
+                        >
+                          <span>{lastSteps.length} steps（thinking & tool use）</span>
+                          <span className="text-xs">{stepsOpen ? "▲" : "▼"}</span>
+                        </button>
+                        {stepsOpen && (
+                          <div className="px-3 pb-3 pt-0 space-y-2 max-h-48 overflow-y-auto text-xs font-mono bg-foreground/5">
+                            {lastSteps.map((step, i) => (
+                              <div key={i} className="rounded p-2 bg-background border border-border">
+                                <span className="font-semibold text-foreground">{step.type}</span>
+                                {step.function != null && <span className="ml-1 text-muted">→ {step.function}</span>}
+                                {step.content != null && <pre className="mt-1 whitespace-pre-wrap break-words text-muted">{step.content}</pre>}
+                                {step.arguments != null && <pre className="mt-1 whitespace-pre-wrap break-words text-muted">{JSON.stringify(step.arguments)}</pre>}
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
+                );
+              })()
             ) : (
               <div className="max-w-[80%] rounded-lg p-3 bg-accent space-y-2">
                 {message.imageBase64 && message.imageMimeType && (

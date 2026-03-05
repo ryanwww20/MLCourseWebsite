@@ -35,7 +35,19 @@
     "youtubeLink": "https://www.youtube.com/watch?v=lVdajtNpaGI&t=6339s",
     "pptLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/Agent.pptx",
     "pdfLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/Agent.pdf",
-    "relatedCourseLinks": []
+    "relatedCourseLinks": [],
+    "extraMaterials": [
+      {
+        "type": "video",
+        "title": "一堂課搞懂 AI Agent 的原理",
+        "url": "https://youtu.be/M2Yg1kwPpts?si=Dw3UvnKQTITxNdci"
+      },
+      {
+        "type": "video",
+        "title": "大型語言模型是如何進行「深度思考」（Reasoning）的？",
+        "url": "https://youtu.be/bJFtcwLSNxI?si=hT-nKkFEEd-zJypH"
+      }
+    ]
   },
   {
     "id": "lesson-GenAI-2025-3",
@@ -49,7 +61,19 @@
     "youtubeLink": "https://www.youtube.com/watch?v=8iFvM7WUUs8",
     "pptLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/LLMunderstand.pptx",
     "pdfLink": "https://speech.ee.ntu.edu.tw/~hylee/GenAI-ML/2025-fall-course-data/LLMunderstand.pdf",
-    "relatedCourseLinks": []
+    "relatedCourseLinks": [],
+    "extraMaterials": [
+      {
+        "type": "video",
+        "title": "AI 的腦科學 — 語言模型內部運作機制剖析",
+        "url": "https://youtu.be/Xnil63UDW2o?si=HvkbgD0DgpKXxXZu"
+      },
+      {
+        "type": "video",
+        "title": "Transformer 的時代要結束了嗎？介紹 Transformer 的競爭者們",
+        "url": "https://youtu.be/gjsdVi90yQo?si=3fvejM9I2Am9yiyK"
+      }
+    ]
   },
   {
     "id": "lesson-GenAI-2025-4",
