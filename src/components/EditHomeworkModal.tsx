@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import type { Course } from "@/mock/courses";
 import type { Homework, HomeworkLink } from "@/mock/homework";
 
@@ -50,6 +51,7 @@ function homeworkToForm(hw: Homework): Record<string, string> {
 }
 
 export default function EditHomeworkModal({ open, onClose, onSuccess, homework }: EditHomeworkModalProps) {
+  const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -103,6 +105,25 @@ export default function EditHomeworkModal({ open, onClose, onSuccess, homework }
       onClose();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "更新失敗");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!homework) return;
+    if (!confirm(`確定要刪除作業「${homework.topic}」？此操作無法復原。`)) return;
+    setSubmitError("");
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE_PATH}/api/admin/homework?id=${encodeURIComponent(homework.id)}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "刪除失敗");
+      onClose();
+      onSuccess?.();
+      router.push(`/courses/${homework.courseId}?tab=homework`);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "刪除失敗");
     } finally {
       setLoading(false);
     }
@@ -190,9 +211,12 @@ export default function EditHomeworkModal({ open, onClose, onSuccess, homework }
             <input value={form.ta ?? ""} onChange={(e) => setForm((f) => ({ ...f, ta: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background" />
           </div>
           {submitError && <p className="text-sm text-red-600">{submitError}</p>}
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-foreground">取消</button>
-            <button type="submit" disabled={loading} className="px-4 py-2 bg-foreground text-background rounded-lg disabled:opacity-50">{loading ? "儲存中…" : "儲存"}</button>
+          <div className="flex gap-2 pt-2 justify-between">
+            <div className="flex gap-2">
+              <button type="button" onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-foreground">取消</button>
+              <button type="submit" disabled={loading} className="px-4 py-2 bg-foreground text-background rounded-lg disabled:opacity-50">{loading ? "儲存中…" : "儲存"}</button>
+            </div>
+            <button type="button" onClick={handleDelete} disabled={loading} className="px-4 py-2 border border-red-500 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50">刪除</button>
           </div>
         </form>
       </div>

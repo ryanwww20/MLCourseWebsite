@@ -18,8 +18,11 @@ export async function GET(req: Request) {
 /** 新增一則留言（不需登入；未登入時 author 為「訪客」） */
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as { courseId?: string; lessonId?: string; content?: string };
-    const { courseId, lessonId, content } = body;
+    const body = (await req.json()) as {
+      courseId?: string; lessonId?: string; content?: string;
+      replyTo?: { id: string; author: string };
+    };
+    const { courseId, lessonId, content, replyTo } = body;
     if (!courseId || !lessonId || typeof content !== "string") {
       return NextResponse.json({ error: "缺少 courseId、lessonId 或 content" }, { status: 400 });
     }
@@ -30,7 +33,11 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     const author =
       session?.user?.name ?? session?.user?.email ?? "訪客";
-    const comment = addComment(courseId, lessonId, { content: trimmed, author });
+    const comment = addComment(courseId, lessonId, {
+      content: trimmed,
+      author,
+      ...(replyTo?.id && replyTo?.author ? { replyTo } : {}),
+    });
     return NextResponse.json({ comment });
   } catch (e) {
     console.error(e);

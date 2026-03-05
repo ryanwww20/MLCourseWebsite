@@ -4,6 +4,12 @@ export interface RelatedCourseLink {
   url: string;
 }
 
+/** 額外教材（video 或 slide，admin 可編輯） */
+export interface ExtraMaterial {
+  type: "video" | "slide";
+  url: string;
+}
+
 export interface Lesson {
   id: string;
   courseId: string;
@@ -22,5 +28,7 @@ export interface Lesson {
   pdfLink?: string;
   /** 相關課程連結（本講頁「相關課程連結」區塊，admin 可編輯） */
   relatedCourseLinks?: RelatedCourseLink[];
+  /** 額外教材（本講頁「Extra Material」區塊，admin 可編輯） */
+  extraMaterials?: ExtraMaterial[];
 }
 

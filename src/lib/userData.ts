@@ -17,6 +17,8 @@ function userSubdir(safeId: string): string {
 
 export interface ChatTabsData {
   tabIds: string[];
+  /** Every session ever created (superset of tabIds); closed tabs remain here. */
+  allTabIds?: string[];
   titles: Record<string, string>;
 }
 
@@ -82,12 +84,13 @@ export function getChatTabs(userId: string, courseId: string, lessonId: string):
   const key = tabsKey(courseId, lessonId);
   const stored = data.chatTabs?.[key];
   if (stored && Array.isArray(stored.tabIds) && stored.tabIds.length > 0) {
-    return {
-      tabIds: stored.tabIds,
-      titles: typeof stored.titles === "object" && stored.titles !== null ? stored.titles : {},
-    };
+    const titles = typeof stored.titles === "object" && stored.titles !== null ? stored.titles : {};
+    const allTabIds = Array.isArray(stored.allTabIds) && stored.allTabIds.length > 0
+      ? stored.allTabIds
+      : stored.tabIds;
+    return { tabIds: stored.tabIds, allTabIds, titles };
   }
-  return { tabIds: [], titles: {} };
+  return { tabIds: [], allTabIds: [], titles: {} };
 }
 
 export function saveChatTabs(
@@ -124,5 +127,30 @@ export function saveChat(
   const data = readUserData(userId);
   if (!data.chats) data.chats = {};
   data.chats[chatKey(courseId, lessonId, tabId)] = messages;
+  writeUserData(userId, data);
+}
+
+export function deleteChat(
+  userId: string,
+  courseId: string,
+  lessonId: string,
+  tabId: string
+): void {
+  const data = readUserData(userId);
+  const key = chatKey(courseId, lessonId, tabId);
+  if (data.chats?.[key]) {
+    delete data.chats[key];
+  }
+  const tKey = tabsKey(courseId, lessonId);
+  const tabs = data.chatTabs?.[tKey];
+  if (tabs) {
+    tabs.tabIds = (tabs.tabIds ?? []).filter((id) => id !== tabId);
+    if (Array.isArray(tabs.allTabIds)) {
+      tabs.allTabIds = tabs.allTabIds.filter((id) => id !== tabId);
+    }
+    if (tabs.titles && tabId in tabs.titles) {
+      delete tabs.titles[tabId];
+    }
+  }
   writeUserData(userId, data);
 }

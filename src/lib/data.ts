@@ -26,6 +26,30 @@ export function appendCourse(course: Course): void {
   writeFileSync(path, JSON.stringify([...existing, course], null, 2), "utf8");
 }
 
+/** 刪除課程（並一併刪除該課程的 lessons 與 homework）。回傳是否找到並刪除。 */
+export function deleteCourse(id: string): boolean {
+  const path = join(DATA_DIR, "courses.json");
+  const list = readJsonArray<Course>(path);
+  const idx = list.findIndex((c) => c.id === id);
+  if (idx === -1) return false;
+  const next = list.filter((c) => c.id !== id);
+  ensureDataDir();
+  writeFileSync(path, JSON.stringify(next, null, 2), "utf8");
+  const lessonPath = join(DATA_DIR, "lessons.json");
+  const lessons = readJsonArray<Lesson>(lessonPath);
+  if (lessons.length > 0) {
+    const remainingLessons = lessons.filter((l) => l.courseId !== id);
+    writeFileSync(lessonPath, JSON.stringify(remainingLessons, null, 2), "utf8");
+  }
+  const hwPath = join(DATA_DIR, "homework.json");
+  const hwList = readJsonArray<Homework>(hwPath);
+  if (hwList.length > 0) {
+    const remainingHw = hwList.filter((h) => h.courseId !== id);
+    writeFileSync(hwPath, JSON.stringify(remainingHw, null, 2), "utf8");
+  }
+  return true;
+}
+
 export function getLessons(): Lesson[] {
   return readJsonArray<Lesson>(join(DATA_DIR, "lessons.json"));
 }
@@ -83,6 +107,18 @@ export function updateLesson(id: string, updates: Partial<Lesson>): boolean {
   return true;
 }
 
+/** 刪除指定 id 的 lesson。回傳是否找到並刪除。 */
+export function deleteLesson(id: string): boolean {
+  const path = join(DATA_DIR, "lessons.json");
+  const list = readJsonArray<Lesson>(path);
+  const idx = list.findIndex((l) => l.id === id);
+  if (idx === -1) return false;
+  const next = list.filter((l) => l.id !== id);
+  ensureDataDir();
+  writeFileSync(path, JSON.stringify(next, null, 2), "utf8");
+  return true;
+}
+
 export function appendHomework(hw: Homework): void {
   ensureDataDir();
   const path = join(DATA_DIR, "homework.json");
@@ -99,5 +135,17 @@ export function updateHomework(id: string, updates: Partial<Homework>): boolean 
   list[idx] = { ...list[idx], ...updates, id: list[idx].id };
   ensureDataDir();
   writeFileSync(path, JSON.stringify(list, null, 2), "utf8");
+  return true;
+}
+
+/** 刪除指定 id 的 homework。回傳是否找到並刪除。 */
+export function deleteHomework(id: string): boolean {
+  const path = join(DATA_DIR, "homework.json");
+  const list = readJsonArray<Homework>(path);
+  const idx = list.findIndex((h) => h.id === id);
+  if (idx === -1) return false;
+  const next = list.filter((h) => h.id !== id);
+  ensureDataDir();
+  writeFileSync(path, JSON.stringify(next, null, 2), "utf8");
   return true;
 }

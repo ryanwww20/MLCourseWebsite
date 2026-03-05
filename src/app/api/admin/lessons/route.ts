@@ -1,8 +1,8 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
-import { appendLesson, getPersistedLessons, updateLesson } from "@/lib/data";
-import type { Lesson, RelatedCourseLink } from "@/mock/lessons";
+import { appendLesson, getPersistedLessons, updateLesson, deleteLesson } from "@/lib/data";
+import type { Lesson, RelatedCourseLink, ExtraMaterial } from "@/mock/lessons";
 
 function parseRelatedCourseLinks(v: unknown): RelatedCourseLink[] {
   if (!Array.isArray(v)) return [];
@@ -18,6 +18,20 @@ function parseRelatedCourseLinks(v: unknown): RelatedCourseLink[] {
     .filter((x): x is RelatedCourseLink => x !== null);
 }
 
+function parseExtraMaterials(v: unknown): ExtraMaterial[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((item) => {
+      if (item && typeof item === "object" && "type" in item && "url" in item) {
+        const type = String((item as { type: unknown }).type).trim();
+        const url = String((item as { url: unknown }).url).trim();
+        if ((type === "video" || type === "slide") && url) return { type, url };
+      }
+      return null;
+    })
+    .filter((x): x is ExtraMaterial => x !== null);
+}
+
 function isAdmin(session: { user?: { role?: string } } | null): boolean {
   return session?.user?.role === "admin";
 }
@@ -29,7 +43,7 @@ export async function POST(req: Request) {
   }
   try {
     const body = (await req.json()) as Record<string, unknown>;
-    const { id, courseId, title, week, date, videoCount, materialLinks, videoLink, youtubeLink, pptLink, pdfLink, relatedCourseLinks } = body;
+    const { id, courseId, title, week, date, videoCount, materialLinks, videoLink, youtubeLink, pptLink, pdfLink, relatedCourseLinks, extraMaterials } = body;
     if (!courseId || !title || week == null || !date) {
       return NextResponse.json({ error: "缺少必填欄位" }, { status: 400 });
     }
@@ -48,6 +62,7 @@ export async function POST(req: Request) {
       pptLink: (pptLink as string) || undefined,
       pdfLink: (pdfLink as string) || undefined,
       relatedCourseLinks: parseRelatedCourseLinks(relatedCourseLinks),
+      extraMaterials: parseExtraMaterials(extraMaterials),
     };
     appendLesson(lesson);
     return NextResponse.json({ ok: true });
@@ -64,7 +79,7 @@ export async function PUT(req: Request) {
   }
   try {
     const body = (await req.json()) as Record<string, unknown>;
-    const { id, courseId, title, week, date, videoCount, materialLinks, videoLink, youtubeLink, pptLink, pdfLink, relatedCourseLinks } = body;
+    const { id, courseId, title, week, date, videoCount, materialLinks, videoLink, youtubeLink, pptLink, pdfLink, relatedCourseLinks, extraMaterials } = body;
     if (!id || !courseId || !title || week == null || !date) {
       return NextResponse.json({ error: "缺少必填欄位" }, { status: 400 });
     }
@@ -81,6 +96,7 @@ export async function PUT(req: Request) {
       pptLink: (pptLink as string) || undefined,
       pdfLink: (pdfLink as string) || undefined,
       relatedCourseLinks: parseRelatedCourseLinks(relatedCourseLinks),
+      extraMaterials: parseExtraMaterials(extraMaterials),
     };
     const updated = updateLesson(String(id), lesson);
     if (!updated) {
@@ -90,5 +106,27 @@ export async function PUT(req: Request) {
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "更新失敗" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!isAdmin(session)) {
+    return NextResponse.json({ error: "僅限 admin" }, { status: 403 });
+  }
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id?.trim()) {
+      return NextResponse.json({ error: "缺少 id" }, { status: 400 });
+    }
+    const deleted = deleteLesson(id.trim());
+    if (!deleted) {
+      return NextResponse.json({ error: "章節不存在或無法刪除" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "刪除失敗" }, { status: 500 });
   }
 }

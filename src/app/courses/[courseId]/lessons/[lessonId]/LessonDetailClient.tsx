@@ -126,6 +126,39 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
                 </div>
               )}
 
+              {/* Extra Material */}
+              {lesson.extraMaterials && lesson.extraMaterials.length > 0 && (
+                <div className="mt-5 pt-4 border-t border-border">
+                  <h3 className="text-sm font-semibold text-foreground mb-2">Extra Material</h3>
+                  <ul className="space-y-1.5">
+                    {lesson.extraMaterials.map((mat, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        {mat.type === "video" ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-muted-foreground flex-shrink-0">
+                            <polygon points="23 7 16 12 23 17 23 7" />
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-muted-foreground flex-shrink-0">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                            <path d="M8 21h8" />
+                            <path d="M12 17v4" />
+                          </svg>
+                        )}
+                        <a
+                          href={mat.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline text-sm truncate"
+                        >
+                          {mat.url}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* 相關課程連結（admin 可編輯，無資料時留白） */}
               <div className="mt-5 pt-4 border-t border-border">
                 <h3 className="text-sm font-semibold text-foreground mb-2">相關課程連結</h3>

@@ -9,6 +9,7 @@ export interface Comment {
   content: string;
   author: string;
   createdAt: string;
+  replyTo?: { id: string; author: string };
 }
 
 type CommentsByLesson = Record<string, Comment[]>;
@@ -48,7 +49,7 @@ export function getComments(courseId: string, lessonId: string): Comment[] {
 export function addComment(
   courseId: string,
   lessonId: string,
-  payload: { content: string; author: string }
+  payload: { content: string; author: string; replyTo?: { id: string; author: string } }
 ): Comment {
   const data = readAll();
   const k = key(courseId, lessonId);
@@ -58,6 +59,7 @@ export function addComment(
     content: payload.content,
     author: payload.author,
     createdAt: new Date().toLocaleString("zh-TW"),
+    ...(payload.replyTo ? { replyTo: payload.replyTo } : {}),
   };
   data[k] = [...list, comment];
   writeAll(data);
