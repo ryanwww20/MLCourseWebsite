@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import VideoPlayer from "@/components/VideoPlayer";
+import VideoPlayer, { type VideoPlayerHandle } from "@/components/VideoPlayer";
 import ChatPanel from "@/components/ChatPanel";
 import EditLectureButton from "@/components/EditLectureButton";
 import type { Lesson } from "@/mock/lessons";
@@ -36,21 +35,21 @@ function HelpIcon({ className }: { className?: string }) {
   );
 }
 
+function formatTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 export default function LessonDetailClient({ courseId, lessonId, lesson, course, relatedLessons }: LessonDetailClientProps) {
   const { data: session } = useSession();
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
+  const playerRef = useRef<VideoPlayerHandle>(null);
   const userId = session?.user?.id ?? session?.user?.email ?? null;
   const iconBase = useIconBase();
-
-  const { prevLesson, nextLesson } = useMemo(() => {
-    const all = [lesson, ...relatedLessons].sort((a, b) => a.week - b.week || a.id.localeCompare(b.id));
-    const idx = all.findIndex((l) => l.id === lesson.id);
-    return {
-      prevLesson: idx > 0 ? all[idx - 1] : null,
-      nextLesson: idx < all.length - 1 ? all[idx + 1] : null,
-    };
-  }, [lesson, relatedLessons]);
 
   return (
     <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-background flex flex-col">
@@ -75,7 +74,7 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
               <EditLectureButton lesson={lesson} />
             </div>
             <div className="aspect-video">
-              <VideoPlayer src={lesson.videoLink ?? lesson.youtubeLink} onTimeUpdate={setCurrentVideoTime} />
+              <VideoPlayer ref={playerRef} src={lesson.videoLink ?? lesson.youtubeLink} onTimeUpdate={setCurrentVideoTime} />
             </div>
 
             {/* Lecture 資訊區（影片下方、留言區上方） */}
@@ -171,52 +170,22 @@ export default function LessonDetailClient({ courseId, lessonId, lesson, course,
 
               {/* 相關課程連結（admin 可編輯，無資料時留白） */}
               <div className="mt-5 pt-4 border-t border-border">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-foreground">相關課程連結</h3>
-                  <div className="flex items-center gap-2">
-                    {prevLesson ? (
-                      <Link
-                        href={`/courses/${courseId}/lessons/${prevLesson.id}`}
-                        className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border border-border text-foreground hover:bg-foreground/10 transition-colors"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-                        </svg>
-                        上一堂
-                      </Link>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border border-border/50 text-muted-foreground/40 cursor-not-allowed select-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-                        </svg>
-                        上一堂
-                      </span>
-                    )}
-                    {nextLesson ? (
-                      <Link
-                        href={`/courses/${courseId}/lessons/${nextLesson.id}`}
-                        className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border border-border text-foreground hover:bg-foreground/10 transition-colors"
-                      >
-                        下一堂
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-                        </svg>
-                      </Link>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border border-border/50 text-muted-foreground/40 cursor-not-allowed select-none">
-                        下一堂
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-                        </svg>
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <h3 className="text-sm font-semibold text-foreground mb-2">相關課程連結</h3>
                 {lesson.relatedCourseLinks && lesson.relatedCourseLinks.length > 0 ? (
-                  <ul className="space-y-1">
+                  <ul className="space-y-1.5">
                     {lesson.relatedCourseLinks.map((link, i) => (
-                      <li key={i}>
-                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      <li key={i} className="flex items-center gap-2">
+                        {link.timestamp != null && (
+                          <button
+                            type="button"
+                            onClick={() => playerRef.current?.seekTo(link.timestamp!)}
+                            className="flex-shrink-0 text-xs font-mono px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors cursor-pointer"
+                            title={`跳到 ${formatTimestamp(link.timestamp!)}`}
+                          >
+                            {formatTimestamp(link.timestamp!)}
+                          </button>
+                        )}
+                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm">
                           {link.label || link.url}
                         </a>
                       </li>

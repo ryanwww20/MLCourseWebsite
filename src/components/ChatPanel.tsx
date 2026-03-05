@@ -956,7 +956,7 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
                   </div>
                 )}
                     <MarkdownErrorBoundary>
-                      <div className="prose prose-sm max-w-none">
+                      <div className="prose prose-base max-w-none">
                         <ReactMarkdown
                           remarkPlugins={[remarkMath]}
                           rehypePlugins={[[rehypeKatex, { throwOnError: false, strict: false }]]}
@@ -1112,7 +1112,7 @@ export default function ChatPanel({ courseId, lessonId, lessonTitle = null, curr
             <button
               onClick={handleSend}
               disabled={isLoading}
-              className={`relative px-4 py-2 bg-accent text-white rounded-2xl transition flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden ${!isLoading && input.trim() ? "shadow-md before:content-[''] before:absolute before:inset-0 before:bg-black/25 before:rounded-2xl" : "shadow-sm"}`}
+              className={`relative px-4 py-2 bg-accent text-white rounded-2xl transition flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden brightness-80 hover:opacity-90 ${!isLoading && input.trim() ? "shadow-md before:content-[''] before:absolute before:inset-0 before:bg-black/25 before:rounded-2xl" : "shadow-sm"}`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

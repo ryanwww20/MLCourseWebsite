@@ -11,7 +11,13 @@ function parseRelatedCourseLinks(v: unknown): RelatedCourseLink[] {
       if (item && typeof item === "object" && "label" in item && "url" in item) {
         const label = String((item as { label: unknown }).label).trim();
         const url = String((item as { url: unknown }).url).trim();
-        return url ? { label: label || url, url } : null;
+        if (!url) return null;
+        const result: RelatedCourseLink = { label: label || url, url };
+        if ("timestamp" in item) {
+          const ts = Number((item as { timestamp: unknown }).timestamp);
+          if (Number.isFinite(ts) && ts >= 0) result.timestamp = ts;
+        }
+        return result;
       }
       return null;
     })

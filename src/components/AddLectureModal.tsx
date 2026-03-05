@@ -2,9 +2,25 @@
 
 import { useState, useEffect } from "react";
 import type { Course } from "@/mock/courses";
-import type { ExtraMaterial } from "@/mock/lessons";
+import type { RelatedCourseLink, ExtraMaterial } from "@/mock/lessons";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+function mmssToSeconds(str: string): number | undefined {
+  const trimmed = str.trim();
+  if (!trimmed) return undefined;
+  const parts = trimmed.split(":");
+  if (parts.length === 2) {
+    const m = parseInt(parts[0], 10);
+    const s = parseInt(parts[1], 10);
+    if (!isNaN(m) && !isNaN(s)) return m * 60 + s;
+  }
+  if (parts.length === 1) {
+    const n = parseInt(parts[0], 10);
+    if (!isNaN(n)) return n;
+  }
+  return undefined;
+}
 
 interface AddLectureModalProps {
   open: boolean;
@@ -16,6 +32,8 @@ export default function AddLectureModal({ open, onClose, onSuccess }: AddLecture
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [relatedCourseLinks, setRelatedCourseLinks] = useState<RelatedCourseLink[]>([]);
+  const [timestampInputs, setTimestampInputs] = useState<string[]>([]);
   const [extraMaterials, setExtraMaterials] = useState<ExtraMaterial[]>([]);
   const [form, setForm] = useState({
     courseId: "",
@@ -63,6 +81,13 @@ export default function AddLectureModal({ open, onClose, onSuccess }: AddLecture
           youtubeLink: form.youtubeLink || undefined,
           pptLink: form.pptLink || undefined,
           pdfLink: form.pdfLink || undefined,
+          relatedCourseLinks: relatedCourseLinks
+            .filter((l) => l.url.trim())
+            .map((l) => ({
+              label: l.label,
+              url: l.url,
+              ...(l.timestamp != null && !isNaN(l.timestamp) ? { timestamp: l.timestamp } : {}),
+            })),
           extraMaterials: extraMaterials.filter((m) => m.url.trim()),
         }),
       });
@@ -71,6 +96,8 @@ export default function AddLectureModal({ open, onClose, onSuccess }: AddLecture
       onSuccess?.();
       onClose();
       setForm({ courseId: "", title: "", week: "", date: "", videoCount: "0", materialLinks: "", videoLink: "", youtubeLink: "", pptLink: "", pdfLink: "" });
+      setRelatedCourseLinks([]);
+      setTimestampInputs([]);
       setExtraMaterials([]);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "新增失敗");
@@ -133,6 +160,74 @@ export default function AddLectureModal({ open, onClose, onSuccess }: AddLecture
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">pdfLink</label>
             <input value={form.pdfLink} onChange={(e) => setForm((f) => ({ ...f, pdfLink: e.target.value }))} className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background" type="url" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">相關課程連結</label>
+            <p className="text-xs text-muted-foreground mb-2">顯示於本講頁「相關課程連結」區塊，可新增多筆（標題 + 連結 + 時間戳）</p>
+            <div className="space-y-3">
+              {relatedCourseLinks.map((link, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <input
+                      value={link.label}
+                      onChange={(e) => {
+                        const next = [...relatedCourseLinks];
+                        next[i] = { ...next[i], label: e.target.value };
+                        setRelatedCourseLinks(next);
+                      }}
+                      placeholder="標題"
+                      className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        value={link.url}
+                        onChange={(e) => {
+                          const next = [...relatedCourseLinks];
+                          next[i] = { ...next[i], url: e.target.value };
+                          setRelatedCourseLinks(next);
+                        }}
+                        placeholder="https://..."
+                        type="url"
+                        className="flex-1 min-w-0 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                      />
+                      <input
+                        value={timestampInputs[i] ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setTimestampInputs((prev) => { const n = [...prev]; n[i] = val; return n; });
+                          const next = [...relatedCourseLinks];
+                          next[i] = { ...next[i], timestamp: mmssToSeconds(val) };
+                          setRelatedCourseLinks(next);
+                        }}
+                        placeholder="分:秒（如 2:30）"
+                        className="w-32 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRelatedCourseLinks((prev) => prev.filter((_, j) => j !== i));
+                      setTimestampInputs((prev) => prev.filter((_, j) => j !== i));
+                    }}
+                    className="p-2 text-muted-foreground hover:text-foreground rounded mt-1"
+                    aria-label="刪除此筆"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setRelatedCourseLinks((prev) => [...prev, { label: "", url: "" }]);
+                  setTimestampInputs((prev) => [...prev, ""]);
+                }}
+                className="text-sm px-3 py-1.5 border border-border rounded-lg text-foreground hover:bg-foreground/5"
+              >
+                ＋ 新增一筆
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Extra Material</label>

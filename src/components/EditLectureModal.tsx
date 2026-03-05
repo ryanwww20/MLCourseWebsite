@@ -7,6 +7,28 @@ import type { Lesson, RelatedCourseLink, ExtraMaterial } from "@/mock/lessons";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
+function secondsToMMSS(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function mmssToSeconds(str: string): number | undefined {
+  const trimmed = str.trim();
+  if (!trimmed) return undefined;
+  const parts = trimmed.split(":");
+  if (parts.length === 2) {
+    const m = parseInt(parts[0], 10);
+    const s = parseInt(parts[1], 10);
+    if (!isNaN(m) && !isNaN(s)) return m * 60 + s;
+  }
+  if (parts.length === 1) {
+    const n = parseInt(parts[0], 10);
+    if (!isNaN(n)) return n;
+  }
+  return undefined;
+}
+
 interface EditLectureModalProps {
   open: boolean;
   onClose: () => void;
@@ -36,6 +58,7 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
   const [submitError, setSubmitError] = useState("");
   const [form, setForm] = useState<Record<string, string>>({});
   const [relatedCourseLinks, setRelatedCourseLinks] = useState<RelatedCourseLink[]>([]);
+  const [timestampInputs, setTimestampInputs] = useState<string[]>([]);
   const [extraMaterials, setExtraMaterials] = useState<ExtraMaterial[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -52,7 +75,9 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
   useEffect(() => {
     if (open && lesson) {
       setForm(lessonToForm(lesson));
-      setRelatedCourseLinks(Array.isArray(lesson.relatedCourseLinks) ? [...lesson.relatedCourseLinks] : []);
+      const links = Array.isArray(lesson.relatedCourseLinks) ? [...lesson.relatedCourseLinks] : [];
+      setRelatedCourseLinks(links);
+      setTimestampInputs(links.map((l) => (l.timestamp != null ? secondsToMMSS(l.timestamp) : "")));
       setExtraMaterials(Array.isArray(lesson.extraMaterials) ? [...lesson.extraMaterials] : []);
     }
   }, [open, lesson]);
@@ -82,7 +107,13 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
           youtubeLink: form.youtubeLink || undefined,
           pptLink: form.pptLink || undefined,
           pdfLink: form.pdfLink || undefined,
-          relatedCourseLinks: relatedCourseLinks.filter((l) => l.url.trim()),
+          relatedCourseLinks: relatedCourseLinks
+            .filter((l) => l.url.trim())
+            .map((l) => ({
+              label: l.label,
+              url: l.url,
+              ...(l.timestamp != null && !isNaN(l.timestamp) ? { timestamp: l.timestamp } : {}),
+            })),
           extraMaterials: extraMaterials.filter((m) => m.url.trim()),
         }),
       });
@@ -178,34 +209,53 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">相關課程連結</label>
             <p className="text-xs text-muted-foreground mb-2">顯示於本講頁「相關課程連結」區塊，可新增多筆（標題 + 連結）</p>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {relatedCourseLinks.map((link, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <input
-                    value={link.label}
-                    onChange={(e) => {
-                      const next = [...relatedCourseLinks];
-                      next[i] = { ...next[i], label: e.target.value };
-                      setRelatedCourseLinks(next);
-                    }}
-                    placeholder="標題"
-                    className="flex-1 min-w-0 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
-                  />
-                  <input
-                    value={link.url}
-                    onChange={(e) => {
-                      const next = [...relatedCourseLinks];
-                      next[i] = { ...next[i], url: e.target.value };
-                      setRelatedCourseLinks(next);
-                    }}
-                    placeholder="https://..."
-                    type="url"
-                    className="flex-1 min-w-0 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
-                  />
+                <div key={i} className="flex gap-2 items-start">
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <input
+                      value={link.label}
+                      onChange={(e) => {
+                        const next = [...relatedCourseLinks];
+                        next[i] = { ...next[i], label: e.target.value };
+                        setRelatedCourseLinks(next);
+                      }}
+                      placeholder="標題"
+                      className="w-full px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        value={link.url}
+                        onChange={(e) => {
+                          const next = [...relatedCourseLinks];
+                          next[i] = { ...next[i], url: e.target.value };
+                          setRelatedCourseLinks(next);
+                        }}
+                        placeholder="https://..."
+                        type="url"
+                        className="flex-1 min-w-0 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                      />
+                      <input
+                        value={timestampInputs[i] ?? ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setTimestampInputs((prev) => { const n = [...prev]; n[i] = val; return n; });
+                          const next = [...relatedCourseLinks];
+                          next[i] = { ...next[i], timestamp: mmssToSeconds(val) };
+                          setRelatedCourseLinks(next);
+                        }}
+                        placeholder="分:秒（如 2:30）"
+                        className="w-32 px-3 py-2 border border-border rounded-md text-foreground bg-background text-sm"
+                      />
+                    </div>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setRelatedCourseLinks((prev) => prev.filter((_, j) => j !== i))}
-                    className="p-2 text-muted-foreground hover:text-foreground rounded"
+                    onClick={() => {
+                      setRelatedCourseLinks((prev) => prev.filter((_, j) => j !== i));
+                      setTimestampInputs((prev) => prev.filter((_, j) => j !== i));
+                    }}
+                    className="p-2 text-muted-foreground hover:text-foreground rounded mt-1"
                     aria-label="刪除此筆"
                   >
                     ×
@@ -214,7 +264,10 @@ export default function EditLectureModal({ open, onClose, onSuccess, lesson }: E
               ))}
               <button
                 type="button"
-                onClick={() => setRelatedCourseLinks((prev) => [...prev, { label: "", url: "" }])}
+                onClick={() => {
+                  setRelatedCourseLinks((prev) => [...prev, { label: "", url: "" }]);
+                  setTimestampInputs((prev) => [...prev, ""]);
+                }}
                 className="text-sm px-3 py-1.5 border border-border rounded-lg text-foreground hover:bg-foreground/5"
               >
                 ＋ 新增一筆

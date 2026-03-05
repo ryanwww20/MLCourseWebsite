@@ -2,6 +2,8 @@
 export interface RelatedCourseLink {
   label: string;
   url: string;
+  /** 影片時間戳（秒），點擊可跳到 YouTube 對應位置 */
+  timestamp?: number;
 }
 
 /** 額外教材（video 或 slide，admin 可編輯） */
