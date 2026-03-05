@@ -8,7 +8,7 @@ const isLocalhost =
   process.env.NODE_ENV === "development";
 
 const ADMIN_USER = "admin";
-const ADMIN_PASS = "admin";
+const ADMIN_PASS = "daikimfanclub2026";
 
 export const authOptions: NextAuthOptions = {
   providers: [
